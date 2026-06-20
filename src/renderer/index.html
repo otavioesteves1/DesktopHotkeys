@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data: file: https:; style-src 'self' 'unsafe-inline';" />
+  <title>StreamDeck</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="backdrop" class="overlay-backdrop"></div>
+
+  <div class="overlay">
+    <div class="overlay__panel" id="panel" tabindex="0">
+      <div class="overlay__header">
+        <div class="eyebrow-row">
+          <span class="overlay__eyebrow">INICIADOR</span>
+          <span class="editbadge" id="editbadge">MODO EDIÇÃO</span>
+        </div>
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div class="searchbar" id="searchbar">
+          <span class="searchbar__icon">⌕</span>
+          <span class="searchbar__text" id="searchtext"></span>
+        </div>
+      </div>
+
+      <div class="overlay__divider"></div>
+
+      <div class="tile-grid" id="grid"></div>
+      <div class="editor" id="editor"></div>
+
+      <div class="footer">
+        <span class="pageind" id="pageind"></span>
+        <span class="footer__right">
+          <span class="hint" id="hint"></span>
+          <button class="editbtn" id="editbtn">✏️ Editar</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

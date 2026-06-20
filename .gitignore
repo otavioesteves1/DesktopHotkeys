@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+
+# Configuração pessoal do usuário (fica só na máquina). O modelo é config.example.json.
+config.json
+config.backup.json

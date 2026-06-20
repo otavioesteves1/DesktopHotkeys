@@ -1,0 +1,14 @@
+{
+  "name": "desktop-hotkeys",
+  "version": "0.2.0",
+  "description": "DesktopHotkeys — painel de atalhos (launcher overlay) por atalho global no Windows",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Otavio",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

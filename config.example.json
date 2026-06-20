@@ -1,0 +1,87 @@
+{
+  "versao": "1.0",
+  "raiz": {
+    "tipo": "pasta",
+    "label": "Início",
+    "filhos": [
+      {
+        "tipo": "pasta",
+        "label": "Autodesk",
+        "icone": "🅰️",
+        "filhos": [
+          {
+            "tipo": "pasta",
+            "label": "Projeto Exemplo 1",
+            "icone": "🏢",
+            "filhos": [
+              { "tipo": "acao", "label": "Módulo 7 — ACC", "icone": "🌐",
+                "acao": { "tipo": "abrir_url", "url": "https://acc.autodesk.com/" } },
+              { "tipo": "acao", "label": "Forma", "icone": "🟦",
+                "acao": { "tipo": "abrir_url", "url": "https://app.forma.autodesk.com/" } },
+              { "tipo": "acao", "label": "Docs", "icone": "📄",
+                "acao": { "tipo": "abrir_url", "url": "https://docs.b360.autodesk.com/" } }
+            ]
+          },
+          {
+            "tipo": "pasta",
+            "label": "Projeto 3",
+            "icone": "🏗️",
+            "filhos": [
+              { "tipo": "acao", "label": "ACC — Projetos", "icone": "🌐",
+                "acao": { "tipo": "abrir_url", "url": "https://acc.autodesk.com/" } },
+              { "tipo": "acao", "label": "Forma", "icone": "🟦",
+                "acao": { "tipo": "abrir_url", "url": "https://app.forma.autodesk.com/" } }
+            ]
+          },
+          { "tipo": "acao", "label": "Autodesk Account", "icone": "👤",
+            "acao": { "tipo": "abrir_url", "url": "https://accounts.autodesk.com/" } }
+        ]
+      },
+      {
+        "tipo": "pasta",
+        "label": "Apps",
+        "icone": "💻",
+        "filhos": [
+          { "tipo": "acao", "label": "Calculadora", "icone": "🧮",
+            "acao": { "tipo": "abrir_arquivo", "caminho": "calc.exe" } },
+          { "tipo": "acao", "label": "Bloco de Notas", "icone": "📝",
+            "acao": { "tipo": "abrir_arquivo", "caminho": "notepad.exe" } },
+          { "tipo": "acao", "label": "Explorador", "icone": "🗂️",
+            "acao": { "tipo": "abrir_arquivo", "caminho": "explorer.exe" } },
+          { "tipo": "acao", "label": "Revit 2025", "icone": "🏠",
+            "acao": { "tipo": "abrir_arquivo", "caminho": "C:\\Program Files\\Autodesk\\Revit 2025\\Revit.exe" } },
+          { "tipo": "acao", "label": "Excel", "icone": "📊",
+            "acao": { "tipo": "abrir_arquivo", "caminho": "%PROGRAMFILES%\\Microsoft Office\\root\\Office16\\EXCEL.EXE" } }
+        ]
+      },
+      {
+        "tipo": "pasta",
+        "label": "Web",
+        "icone": "🌐",
+        "filhos": [
+          { "tipo": "acao", "label": "Gmail", "icone": "📧",
+            "acao": { "tipo": "abrir_url", "url": "https://mail.google.com/" } },
+          { "tipo": "acao", "label": "Google Drive", "icone": "☁️",
+            "acao": { "tipo": "abrir_url", "url": "https://drive.google.com/" } },
+          { "tipo": "acao", "label": "YouTube", "icone": "▶️",
+            "acao": { "tipo": "abrir_url", "url": "https://youtube.com/" } },
+          { "tipo": "acao", "label": "ChatGPT", "icone": "🤖",
+            "acao": { "tipo": "abrir_url", "url": "https://chat.openai.com/" } }
+        ]
+      },
+      {
+        "tipo": "pasta",
+        "label": "Ferramentas",
+        "icone": "🔧",
+        "filhos": [
+          { "tipo": "acao", "label": "Copiar e-mail", "icone": "📋",
+            "acao": { "tipo": "copiar_texto", "texto": "seu-email@exemplo.com" } },
+          { "tipo": "acao", "label": "Downloads", "icone": "⬇️",
+            "acao": { "tipo": "abrir_arquivo", "caminho": "%USERPROFILE%\\Downloads" } },
+          { "tipo": "acao", "label": "Recorte de tela", "icone": "✂️",
+            "acao": { "tipo": "executar_comando", "comando": "start ms-screenclip:", "shell": "cmd" } }
+        ]
+      }
+    ]
+  }
+}

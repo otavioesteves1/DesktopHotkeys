@@ -200,6 +200,25 @@ ipcMain.handle('dialog:pickFile', async () => {
   return (r.canceled || !r.filePaths.length) ? null : r.filePaths[0];
 });
 
+ipcMain.handle('dialog:pickImage', async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: 'Escolher imagem ou GIF',
+    properties: ['openFile'],
+    filters: [{ name: 'Imagens', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'svg'] }]
+  });
+  if (win) win.focus();
+  return (r.canceled || !r.filePaths.length) ? null : r.filePaths[0];
+});
+
+ipcMain.handle('dialog:pickFolder', async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: 'Escolher pasta',
+    properties: ['openDirectory']
+  });
+  if (win) win.focus();
+  return (r.canceled || !r.filePaths.length) ? null : r.filePaths[0];
+});
+
 // ---------- Ciclo de vida ----------
 app.whenReady().then(() => {
   ensureConfig();
@@ -231,8 +250,12 @@ app.whenReady().then(() => {
       await wait(700); await shot('streamdeck_selftest.png');
       await win.webContents.executeJavaScript('toggleEdit();');
       await wait(300); await shot('streamdeck_selftest_edit.png');
-      await win.webContents.executeJavaScript('addNew(); document.getElementById("f-acaotipo").value="abrir_arquivo"; document.getElementById("f-acaotipo").dispatchEvent(new Event("change"));');
+      await win.webContents.executeJavaScript('addAt(4); document.getElementById("f-acaotipo").value="abrir_arquivo"; document.getElementById("f-acaotipo").dispatchEvent(new Event("change"));');
       await wait(300); await shot('streamdeck_selftest_form.png');
+      await win.webContents.executeJavaScript('showGrid(); openTemplateEditor(); document.getElementById("tm-preset").click();');
+      await wait(300); await shot('streamdeck_selftest_tmpl.png');
+      await win.webContents.executeJavaScript('showGrid(); current().modelo = AUTODESK_MODEL; render(); openNewProject();');
+      await wait(300); await shot('streamdeck_selftest_newproj.png');
       app.quit();
     });
   }

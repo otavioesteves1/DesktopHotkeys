@@ -6,18 +6,31 @@ Painel de atalhos para Windows que abre por cima de tudo com um atalho de teclad
 
 ## Como usar
 
+Grade fixa de 12 lugares com teclas no estilo StarCraft:
+
+```
+Q  W  E  R
+A  S  D  F
+Z  X  C  V
+```
+
 - **Abrir / fechar:** `Ctrl + Shift + Alt + P`
-- **Escolher:** aperte o número do quadradinho (`1`–`9` e `0` para o décimo)
+- **Escolher:** aperte a letra do quadradinho (`Q W E R / A S D F / Z X C V`)
 - **Voltar uma pasta:** `Esc` ou `Backspace`
 - **Ir pro início:** `Home`
-- **Trocar de página** (muitos itens): `Tab` ou setas `←` `→`
-- **Buscar:** comece a digitar o nome
+- **Trocar de página** (mais de 12 itens): `Tab` ou setas `←` `→`
+- Lugares vazios ("buracos") ficam visíveis, então cada botão mantém sempre a mesma tecla.
 - O app fica na **bandeja** (perto do relógio). Botão direito → editar atalhos, abrir pasta, sair.
 
 ## Editar pela interface (sem mexer em arquivo)
 
-Abra o painel → **✏️ Editar** (ou `Ctrl+E`) → clique no **➕ Adicionar** ou em um botão existente.
-Dá pra definir nome, ícone (emoji), tipo (📁 Pasta ou ⚡ Ação) e, na ação, o que ela faz.
+Abra o painel → **✏️ Editar** (ou `Ctrl+E`). Aí dá pra:
+
+- Clicar num lugar vazio (**＋**) pra criar, ou num botão pra editar.
+- Definir nome, **ícone (emoji ou imagem/GIF)**, tipo (📁 Pasta ou ⚡ Ação) e, na ação, o que ela faz.
+- **Arrastar** um botão para mover/reordenar entre os lugares.
+- **🧩 Modelo** — define os campos padrão de um "projeto" (ex.: Autodesk: Arquivos, Problemas, Membros…), reordenáveis.
+- **➕ Novo projeto** — com o modelo definido, cria um projeto preenchendo todos os links e a pasta numa tela só.
 
 ## Editar pelo arquivo
 

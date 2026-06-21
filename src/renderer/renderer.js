@@ -1,6 +1,8 @@
 'use strict';
 
-const PER_PAGE = 10; // teclas 1..9 e 0
+// Layout estilo StarCraft: Q W E R / A S D F / Z X C V  (12 lugares fixos)
+const SLOT_KEYS = ['q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v'];
+const SLOTS = 12;
 
 const EMOJIS = ['🌐','📄','📁','📂','💻','📊','📝','🏠','🏢','🏗️','🔧','📧','☁️','▶️','🤖','👤','⚡','📋','⬇️','✂️','🅰️','🟦','🧮','🗂️','📌','⭐','🔗','⚙️'];
 const ACOES = [
@@ -11,20 +13,35 @@ const ACOES = [
   { v: 'enviar_teclas',    t: 'Enviar teclas' }
 ];
 
+// Modelo padrão de projeto Autodesk (links + pasta do DesktopConnector)
+const AUTODESK_MODEL = [
+  { label: 'Arquivos',        tipo: 'abrir_url',     icone: '📄' },
+  { label: 'Problemas',       tipo: 'abrir_url',     icone: '⚠️' },
+  { label: 'Membros',         tipo: 'abrir_url',     icone: '👥' },
+  { label: 'Configurações',   tipo: 'abrir_url',     icone: '⚙️' },
+  { label: 'DesignCollab',    tipo: 'abrir_url',     icone: '🤝' },
+  { label: 'Modelo',          tipo: 'abrir_url',     icone: '🏗️' },
+  { label: 'Vistas',          tipo: 'abrir_url',     icone: '👁️' },
+  { label: 'Interferências',  tipo: 'abrir_url',     icone: '🚧' },
+  { label: 'DesktopConnector', tipo: 'abrir_arquivo', icone: '🗂️' }
+];
+
 // ---------- Estado ----------
 let fullConfig = null;
 let root = null;
 let stack = [];
 let page = 0;
-let query = '';
 let navDir = 'none';
 let busy = false;
 
 let editMode = false;
 let view = 'grid';        // 'grid' | 'form'
-let editing = null;       // { node, isNew, parent }
+let editing = null;       // { node, isNew, index }
 let editingTipo = 'acao';
 let delArmed = false;
+let dragSrc = null;
+let tmplWork = [];        // cópia de trabalho do modelo (editor de modelo)
+let npWork = [];          // campos do modelo ao criar novo projeto
 
 // ---------- Elementos ----------
 const body = document.body;
@@ -33,33 +50,28 @@ const backdrop = document.getElementById('backdrop');
 const gridEl = document.getElementById('grid');
 const editorEl = document.getElementById('editor');
 const breadcrumbEl = document.getElementById('breadcrumb');
-const searchbarEl = document.getElementById('searchbar');
-const searchtextEl = document.getElementById('searchtext');
 const pageindEl = document.getElementById('pageind');
 const hintEl = document.getElementById('hint');
 const editbtn = document.getElementById('editbtn');
 const editbadge = document.getElementById('editbadge');
+const btnTmpl = document.getElementById('btn-tmpl');
+const btnNewProj = document.getElementById('btn-newproj');
 
 // ---------- Utilitários ----------
-function norm(s) {
-  return String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-}
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function current() { return stack[stack.length - 1]; }
+function kids() { return (current() && Array.isArray(current().filhos)) ? current().filhos : []; }
+function pageCount() { return Math.max(1, Math.ceil(kids().length / SLOTS)); }
 
-function children() {
-  const kids = (current() && current().filhos) ? current().filhos : [];
-  if (!query) return kids;
-  const q = norm(query);
-  return kids.filter(k => norm(k.label).includes(q));
+function normalizeFilhos(folder) {
+  const a = folder && folder.filhos;
+  if (!Array.isArray(a)) return;
+  while (a.length && a[a.length - 1] == null) a.pop();
 }
-function pageCount() { return Math.max(1, Math.ceil(children().length / PER_PAGE)); }
-function keyLabel(i) { return i === 9 ? '0' : String(i + 1); }
-function keyToIndex(k) { return k === '0' ? 9 : (parseInt(k, 10) - 1); }
 
 function toast(msg) {
   let t = document.getElementById('sd-toast');
@@ -89,7 +101,7 @@ function iconHTML(tile) {
 
 // ---------- Render da grade ----------
 function render() {
-  const kids = children();
+  const all = kids();
   const pages = pageCount();
   if (page >= pages) page = pages - 1;
   if (page < 0) page = 0;
@@ -112,77 +124,74 @@ function render() {
     });
   }
 
-  // Busca
-  if (query) { searchbarEl.classList.add('is-active'); searchtextEl.textContent = query; }
-  else { searchbarEl.classList.remove('is-active'); }
-
-  // Tiles
-  const start = page * PER_PAGE;
-  const slice = kids.slice(start, start + PER_PAGE);
-
   gridEl.classList.remove('nav-in', 'nav-out', 'nav-none');
   void gridEl.offsetWidth;
   gridEl.classList.add(navDir === 'in' ? 'nav-in' : navDir === 'out' ? 'nav-out' : 'nav-none');
   navDir = 'none';
 
-  const addTile = `<div class="tile tile--add" data-add="1">
-    <div class="tile__icon">＋</div><div class="tile__label">Adicionar</div></div>`;
-
-  if (kids.length === 0) {
-    gridEl.innerHTML = editMode ? addTile :
-      `<div class="tile tile--empty"><div class="tile__icon">📂</div>
-       <div class="tile__label">${query ? 'Nada encontrado' : 'Pasta vazia'}</div></div>`;
-  } else {
-    let html = slice.map((tile, i) => {
-      const isFolder = tile.tipo === 'pasta';
-      return `<div class="tile ${isFolder ? 'tile--folder' : ''}" data-index="${start + i}">
-        <span class="tile__number">${keyLabel(i)}</span>
-        <div class="tile__icon">${iconHTML(tile)}</div>
-        <div class="tile__label" title="${esc(tile.label)}">${esc(tile.label)}</div>
+  const start = page * SLOTS;
+  let html = '';
+  for (let i = 0; i < SLOTS; i++) {
+    const gi = start + i;
+    const key = SLOT_KEYS[i].toUpperCase();
+    const item = all[gi];
+    if (item) {
+      const isFolder = item.tipo === 'pasta';
+      html += `<div class="tile ${isFolder ? 'tile--folder' : ''}" data-index="${gi}" ${editMode ? 'draggable="true"' : ''}>
+        <span class="tile__key">${key}</span>
+        <div class="tile__icon">${iconHTML(item)}</div>
+        <div class="tile__label" title="${esc(item.label)}">${esc(item.label)}</div>
         ${isFolder ? '<span class="tile__chevron">›</span>' : ''}
       </div>`;
-    }).join('');
-    if (editMode && page === pages - 1) html += addTile;
-    gridEl.innerHTML = html;
+    } else if (editMode) {
+      html += `<div class="tile tile--add" data-add="${gi}">
+        <span class="tile__key">${key}</span><div class="tile__icon">＋</div></div>`;
+    } else {
+      html += `<div class="tile tile--hole"><span class="tile__key">${key}</span></div>`;
+    }
   }
+  gridEl.innerHTML = html;
 
-  // Rodapé
   pageindEl.textContent = pages > 1 ? `Página ${page + 1} de ${pages}  ·  Tab / → muda de página` : '';
-  if (editMode) hintEl.textContent = stack.length > 1 ? 'Clique pra editar · Esc volta' : 'Clique pra editar';
+  if (editMode) hintEl.textContent = stack.length > 1 ? 'Clique pra editar · arraste pra mover · Esc volta' : 'Clique pra editar · arraste pra mover';
   else hintEl.textContent = stack.length > 1 ? 'Esc volta' : 'Esc fecha';
+
+  const hasModel = Array.isArray(current().modelo) && current().modelo.length > 0;
+  btnTmpl.style.display = editMode ? '' : 'none';
+  btnNewProj.style.display = (editMode && hasModel) ? '' : 'none';
 }
 
 // ---------- Navegação ----------
 function goToDepth(i) {
   leaveForm();
   stack = stack.slice(0, i + 1);
-  page = 0; query = ''; navDir = 'out';
+  page = 0; navDir = 'out';
   render();
 }
 
-function activateIndex(globalIdx, el) {
-  const tile = children()[globalIdx];
+function activateIndex(gi, el) {
+  const tile = kids()[gi];
   if (!tile) return;
   if (tile.tipo === 'pasta') {
-    stack.push(tile); page = 0; query = ''; navDir = 'in'; render();
+    stack.push(tile); page = 0; navDir = 'in'; render();
   } else {
     if (busy) return;
     busy = true;
     if (el) el.classList.add('tile--pressed');
-    setTimeout(() => window.api.runAction(tile.acao), 110);
+    setTimeout(() => window.api.runAction(tile.acao), 200);
   }
 }
 
 function activateByKey(k) {
-  const idx = keyToIndex(k);
-  if (idx < 0 || idx > 9) return;
-  const globalIdx = page * PER_PAGE + idx;
-  const el = gridEl.querySelector(`.tile[data-index="${globalIdx}"]`);
-  activateIndex(globalIdx, el);
+  const i = SLOT_KEYS.indexOf(k.toLowerCase());
+  if (i < 0) return;
+  const gi = page * SLOTS + i;
+  const el = gridEl.querySelector(`.tile[data-index="${gi}"]`);
+  activateIndex(gi, el);
 }
 
 function back() {
-  if (stack.length > 1) { stack.pop(); page = 0; query = ''; navDir = 'out'; render(); }
+  if (stack.length > 1) { stack.pop(); page = 0; navDir = 'out'; render(); }
   else closeWithAnim();
 }
 
@@ -197,6 +206,19 @@ function closeWithAnim() {
   setTimeout(() => window.api.doHide(), 140);
 }
 
+// ---------- Reordenar (arrastar) ----------
+function moveItem(from, to) {
+  if (from === to) return;
+  const a = current().filhos;
+  while (a.length <= Math.max(from, to)) a.push(null);
+  const tmp = a[to] != null ? a[to] : null;
+  a[to] = a[from];
+  a[from] = tmp;
+  normalizeFilhos(current());
+  window.api.saveConfig(fullConfig);
+  render();
+}
+
 // ---------- Modo edição ----------
 function toggleEdit() {
   if (view === 'form') leaveForm();
@@ -205,7 +227,6 @@ function toggleEdit() {
   editbtn.classList.toggle('is-on', editMode);
   editbtn.textContent = editMode ? '✓ Concluir' : '✏️ Editar';
   editbadge.classList.toggle('is-on', editMode);
-  query = '';
   showGrid();
 }
 
@@ -217,9 +238,9 @@ function showGrid() {
 
 function leaveForm() {
   if (editing && editing.isNew) {
-    const p = editing.parent;
-    const i = p.filhos.indexOf(editing.node);
-    if (i >= 0) p.filhos.splice(i, 1);
+    const a = current().filhos;
+    if (Array.isArray(a) && a[editing.index] === editing.node) a[editing.index] = null;
+    normalizeFilhos(current());
   }
   editing = null; delArmed = false;
   editorEl.classList.remove('is-on');
@@ -228,17 +249,18 @@ function leaveForm() {
   view = 'grid';
 }
 
-function addNew() {
+function addAt(index) {
   const parent = current();
   if (!Array.isArray(parent.filhos)) parent.filhos = [];
+  while (parent.filhos.length <= index) parent.filhos.push(null);
   const node = { tipo: 'acao', label: '', icone: '', acao: { tipo: 'abrir_url', url: '' } };
-  parent.filhos.push(node);
-  openForm(node, true);
+  parent.filhos[index] = node;
+  openForm(node, true, index);
 }
 
-function openForm(node, isNew) {
+function openForm(node, isNew, index) {
   if (!node) return;
-  editing = { node, isNew, parent: current() };
+  editing = { node, isNew, index };
   delArmed = false;
   view = 'form';
   gridEl.style.display = 'none';
@@ -256,7 +278,10 @@ function buildForm(node) {
     </div>
     <div class="frow">
       <label class="flabel">Ícone</label>
-      <input id="f-icone" class="finput" type="text" placeholder="Cole um emoji (ou um caminho de imagem)" value="${esc(node.icone || '')}">
+      <div class="frow-inline">
+        <input id="f-icone" class="finput" type="text" placeholder="Cole um emoji, ou escolha uma imagem/GIF" value="${esc(node.icone || '')}">
+        <button type="button" id="f-img" class="fbtn">Imagem/GIF...</button>
+      </div>
       <div class="emojis" id="f-emojis">${EMOJIS.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
     </div>
     <div class="frow">
@@ -281,6 +306,10 @@ function buildForm(node) {
     const b = e.target.closest('button'); if (!b) return;
     document.getElementById('f-icone').value = b.dataset.e;
   });
+  document.getElementById('f-img').addEventListener('click', async () => {
+    const p = await window.api.pickImage();
+    if (p) document.getElementById('f-icone').value = p;
+  });
   editorEl.querySelectorAll('.seg__btn').forEach(b => {
     b.addEventListener('click', () => {
       editingTipo = b.dataset.tipo;
@@ -289,7 +318,7 @@ function buildForm(node) {
     });
   });
   document.getElementById('f-salvar').addEventListener('click', saveForm);
-  document.getElementById('f-cancelar').addEventListener('click', () => { showGrid(); });
+  document.getElementById('f-cancelar').addEventListener('click', () => showGrid());
   document.getElementById('f-entrar').addEventListener('click', enterFolder);
   const apagar = document.getElementById('f-apagar');
   if (!editing.isNew) {
@@ -412,18 +441,152 @@ async function enterFolder() {
   editing.isNew = false;
   await window.api.saveConfig(fullConfig);
   leaveForm();
-  stack.push(node); page = 0; query = ''; navDir = 'in';
+  stack.push(node); page = 0; navDir = 'in';
   render(); panel.focus();
 }
 
 async function doDelete() {
-  const p = editing.parent;
-  const i = p.filhos.indexOf(editing.node);
-  if (i >= 0) p.filhos.splice(i, 1);
-  editing.isNew = false; // já removido; não remover de novo no leaveForm
+  const a = current().filhos;
+  if (Array.isArray(a)) a[editing.index] = null;
+  normalizeFilhos(current());
+  editing.isNew = false;
   await window.api.saveConfig(fullConfig);
   showGrid();
   toast('Apagado');
+}
+
+// ---------- Modelo de projeto ----------
+function openTemplateEditor() {
+  const folder = current();
+  tmplWork = Array.isArray(folder.modelo) ? folder.modelo.map(x => ({ ...x })) : [];
+  view = 'tmpl';
+  gridEl.style.display = 'none';
+  editorEl.classList.add('is-on');
+  btnTmpl.style.display = 'none'; btnNewProj.style.display = 'none';
+  renderTemplateEditor();
+}
+
+function renderTemplateEditor() {
+  const rows = tmplWork.map((f, i) => `
+    <div class="trow" data-i="${i}">
+      <input class="finput tm-label" type="text" placeholder="Nome do campo" value="${esc(f.label || '')}">
+      <select class="fselect tm-tipo">
+        <option value="abrir_url" ${f.tipo !== 'abrir_arquivo' ? 'selected' : ''}>Site (link)</option>
+        <option value="abrir_arquivo" ${f.tipo === 'abrir_arquivo' ? 'selected' : ''}>Pasta / arquivo</option>
+      </select>
+      <button type="button" class="fbtn tm-up" title="Subir">↑</button>
+      <button type="button" class="fbtn tm-down" title="Descer">↓</button>
+      <button type="button" class="fbtn danger tm-del" title="Remover">✕</button>
+    </div>`).join('');
+  editorEl.innerHTML = `
+    <div class="flabel" style="margin-bottom:10px">Modelo de projeto de <b>${esc(current().label)}</b> — os campos que todo projeto novo vai ter:</div>
+    <div id="tm-rows">${rows || '<div class="fhint">Nenhum campo ainda. Adicione ou use o modelo Autodesk.</div>'}</div>
+    <div class="frow-inline" style="margin-top:10px">
+      <button type="button" id="tm-add" class="fbtn">＋ Adicionar campo</button>
+      <button type="button" id="tm-preset" class="fbtn ghost">Usar modelo Autodesk</button>
+    </div>
+    <div class="formbtns">
+      <button type="button" id="tm-salvar" class="fbtn primary">Salvar modelo</button>
+      <button type="button" id="tm-cancelar" class="fbtn">Cancelar</button>
+    </div>`;
+
+  document.getElementById('tm-add').onclick = () => { syncTmpl(); tmplWork.push({ label: '', tipo: 'abrir_url' }); renderTemplateEditor(); };
+  document.getElementById('tm-preset').onclick = () => { tmplWork = AUTODESK_MODEL.map(x => ({ ...x })); renderTemplateEditor(); };
+  document.getElementById('tm-salvar').onclick = saveTemplate;
+  document.getElementById('tm-cancelar').onclick = () => showGrid();
+  editorEl.querySelectorAll('.trow').forEach(row => {
+    const i = +row.dataset.i;
+    row.querySelector('.tm-up').onclick = () => { syncTmpl(); if (i > 0) { const t = tmplWork[i - 1]; tmplWork[i - 1] = tmplWork[i]; tmplWork[i] = t; } renderTemplateEditor(); };
+    row.querySelector('.tm-down').onclick = () => { syncTmpl(); if (i < tmplWork.length - 1) { const t = tmplWork[i + 1]; tmplWork[i + 1] = tmplWork[i]; tmplWork[i] = t; } renderTemplateEditor(); };
+    row.querySelector('.tm-del').onclick = () => { syncTmpl(); tmplWork.splice(i, 1); renderTemplateEditor(); };
+  });
+}
+
+function syncTmpl() {
+  editorEl.querySelectorAll('#tm-rows .trow').forEach(row => {
+    const i = +row.dataset.i;
+    if (!tmplWork[i]) return;
+    tmplWork[i].label = row.querySelector('.tm-label').value.trim();
+    tmplWork[i].tipo = row.querySelector('.tm-tipo').value;
+  });
+}
+
+async function saveTemplate() {
+  syncTmpl();
+  current().modelo = tmplWork.filter(f => f.label);
+  await window.api.saveConfig(fullConfig);
+  showGrid();
+  toast('Modelo salvo ✓');
+}
+
+// ---------- Novo projeto pelo modelo ----------
+function openNewProject() {
+  const folder = current();
+  npWork = Array.isArray(folder.modelo) ? folder.modelo : [];
+  if (!npWork.length) { toast('Defina um modelo primeiro (botão Modelo)'); return; }
+  view = 'newproj';
+  gridEl.style.display = 'none';
+  editorEl.classList.add('is-on');
+  btnTmpl.style.display = 'none'; btnNewProj.style.display = 'none';
+  renderNewProject();
+}
+
+function renderNewProject() {
+  const fields = npWork.map((f, i) => {
+    const isFolder = f.tipo === 'abrir_arquivo';
+    return `<div class="frow">
+      <label class="flabel">${f.icone ? esc(f.icone) + ' ' : ''}${esc(f.label)}${isFolder ? ' (pasta)' : ' (link)'}</label>
+      <div class="frow-inline">
+        <input id="np-f-${i}" class="finput" type="text" placeholder="${isFolder ? 'C:\\\\...\\\\pasta' : 'https://...'}">
+        ${isFolder ? `<button type="button" class="fbtn np-folder" data-i="${i}">Procurar pasta...</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  editorEl.innerHTML = `
+    <div class="frow">
+      <label class="flabel">Nome do projeto</label>
+      <input id="np-nome" class="finput" type="text" placeholder="Ex.: REPIR-CID">
+    </div>
+    <div class="frow">
+      <label class="flabel">Ícone (opcional)</label>
+      <input id="np-icone" class="finput" type="text" placeholder="Cole um emoji" value="🏢">
+    </div>
+    <div class="flabel" style="margin:6px 0 2px">Links e pastas do projeto:</div>
+    ${fields}
+    <div class="formbtns">
+      <button type="button" id="np-salvar" class="fbtn primary">Criar projeto</button>
+      <button type="button" id="np-cancelar" class="fbtn">Cancelar</button>
+    </div>`;
+
+  editorEl.querySelectorAll('.np-folder').forEach(b => {
+    b.onclick = async () => { const p = await window.api.pickFolder(); if (p) document.getElementById('np-f-' + b.dataset.i).value = p; };
+  });
+  document.getElementById('np-salvar').onclick = saveNewProject;
+  document.getElementById('np-cancelar').onclick = () => showGrid();
+  document.getElementById('np-nome').focus();
+}
+
+async function saveNewProject() {
+  const name = val('np-nome') || 'Novo projeto';
+  const icone = val('np-icone');
+  const children = npWork.map((f, i) => {
+    const v = val('np-f-' + i);
+    const node = { tipo: 'acao', label: f.label };
+    if (f.icone) node.icone = f.icone;
+    if (f.tipo === 'abrir_arquivo') node.acao = { tipo: 'abrir_arquivo', caminho: v };
+    else node.acao = { tipo: 'abrir_url', url: v };
+    return node;
+  });
+  const folderNode = { tipo: 'pasta', label: name, filhos: children };
+  if (icone) folderNode.icone = icone;
+  const parent = current();
+  if (!Array.isArray(parent.filhos)) parent.filhos = [];
+  let idx = parent.filhos.findIndex(x => x == null);
+  if (idx < 0) idx = parent.filhos.length;
+  parent.filhos[idx] = folderNode;
+  await window.api.saveConfig(fullConfig);
+  showGrid();
+  toast('Projeto criado ✓');
 }
 
 // ---------- Teclado ----------
@@ -435,7 +598,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault(); toggleEdit(); return;
   }
 
-  if (typing || view === 'form') {
+  if (typing || view !== 'grid') {
     if (e.key === 'Escape') { e.preventDefault(); showGrid(); }
     return;
   }
@@ -452,36 +615,64 @@ window.addEventListener('keydown', (e) => {
   }
 
   const k = e.key;
-  if (k === 'Escape') { e.preventDefault(); if (query) { query = ''; render(); } else back(); return; }
-  if (k === 'Backspace') { e.preventDefault(); if (query) { query = query.slice(0, -1); page = 0; render(); } else back(); return; }
+  if (k === 'Escape') { e.preventDefault(); back(); return; }
+  if (k === 'Backspace') { e.preventDefault(); back(); return; }
   if (k === 'Tab') { e.preventDefault(); if (e.shiftKey) prevPage(); else nextPage(); return; }
   if (k === 'ArrowRight') { e.preventDefault(); nextPage(); return; }
   if (k === 'ArrowLeft') { e.preventDefault(); prevPage(); return; }
-  if (k === 'Home' || k === '`') { e.preventDefault(); stack = [root]; page = 0; query = ''; navDir = 'out'; render(); return; }
-  if (/^[0-9]$/.test(k)) { e.preventDefault(); activateByKey(k); return; }
-  if (k.length === 1 && /\p{L}/u.test(k)) { query += k.toLowerCase(); page = 0; render(); }
+  if (k === 'Home') { e.preventDefault(); stack = [root]; page = 0; navDir = 'out'; render(); return; }
+  if (k.length === 1 && SLOT_KEYS.includes(k.toLowerCase())) { e.preventDefault(); activateByKey(k); }
 });
 
 // ---------- Mouse ----------
 gridEl.addEventListener('click', (e) => {
   if (view !== 'grid') return;
-  const el = e.target.closest('.tile');
-  if (!el) return;
-  if (el.classList.contains('tile--add')) { addNew(); return; }
-  if (el.classList.contains('tile--empty')) return;
-  const idx = parseInt(el.dataset.index, 10);
-  if (editMode) openForm(children()[idx], false);
-  else activateIndex(idx, el);
+  const add = e.target.closest('.tile--add');
+  if (add && editMode) { addAt(parseInt(add.dataset.add, 10)); return; }
+  const tile = e.target.closest('.tile[data-index]');
+  if (!tile) return;
+  const idx = parseInt(tile.dataset.index, 10);
+  if (editMode) openForm(kids()[idx], false, idx);
+  else activateIndex(idx, tile);
 });
 backdrop.addEventListener('click', () => { if (!editMode) closeWithAnim(); });
 editbtn.addEventListener('click', toggleEdit);
+btnTmpl.addEventListener('click', openTemplateEditor);
+btnNewProj.addEventListener('click', openNewProject);
+
+// ---------- Arrastar pra reordenar ----------
+gridEl.addEventListener('dragstart', (e) => {
+  if (!editMode) return;
+  const t = e.target.closest('.tile[data-index]');
+  if (!t) { e.preventDefault(); return; }
+  dragSrc = parseInt(t.dataset.index, 10);
+  e.dataTransfer.effectAllowed = 'move';
+  t.classList.add('dragging');
+});
+gridEl.addEventListener('dragover', (e) => {
+  if (editMode && dragSrc != null) e.preventDefault();
+});
+gridEl.addEventListener('drop', (e) => {
+  if (!editMode || dragSrc == null) return;
+  e.preventDefault();
+  const cell = e.target.closest('[data-index],[data-add]');
+  if (cell) {
+    const to = parseInt(cell.dataset.index != null ? cell.dataset.index : cell.dataset.add, 10);
+    moveItem(dragSrc, to);
+  }
+  dragSrc = null;
+});
+gridEl.addEventListener('dragend', () => {
+  dragSrc = null;
+  gridEl.querySelectorAll('.dragging').forEach(x => x.classList.remove('dragging'));
+});
 
 // ---------- Ponte com o main ----------
 window.api.onOpen((config) => {
   fullConfig = config;
   root = config.raiz;
   stack = [root];
-  page = 0; query = ''; navDir = 'none'; busy = false;
+  page = 0; navDir = 'none'; busy = false;
 
   editMode = false; view = 'grid'; editing = null;
   window.api.setEditMode(false);

@@ -10,5 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   // editor
   setEditMode: (on) => ipcRenderer.send('edit:setMode', on),
   saveConfig: (config) => ipcRenderer.invoke('config:save', config),
-  pickFile: () => ipcRenderer.invoke('dialog:pickFile')
+  pickFile: () => ipcRenderer.invoke('dialog:pickFile'),
+  pickImage: () => ipcRenderer.invoke('dialog:pickImage'),
+  pickFolder: () => ipcRenderer.invoke('dialog:pickFolder')
 });

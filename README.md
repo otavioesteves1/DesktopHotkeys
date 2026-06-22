@@ -54,22 +54,24 @@ fáceis de alcançar com a mão esquerda:
 - ✏️ **Editor visual** dentro do app — sem mexer em arquivo
 - 🧲 **Arrastar pra reordenar** os botões
 - 🧩 **Modelos de projeto** — crie um projeto novo preenchendo todos os links e pastas numa tela só
-- ⚙️ **Configurável pela bandeja** — troque o atalho de abertura e ligue "iniciar com o Windows"
+- 🪟 **Editor em janela móvel** — arraste pela barra ⠿ e deixe do lado do navegador; não escurece a tela
+- ⚙️ **Opções de interface** — tamanho (pequeno/médio/grande), posição (centro/embaixo) e fundo (escuro/leve/nenhum)
+- 🎚️ **Configurável pela bandeja** — troque o atalho de abertura e ligue "iniciar com o Windows"
 - 🔒 Sua configuração (`config.json`) fica **só na sua máquina**
 
 ---
 
 ## 📸 Telas
 
-**Modo de edição** — clique num lugar vazio (`＋`) pra criar, ou num botão pra editar; arraste pra mover.
+**Editor em janela móvel** — ao editar, o painel vira uma janelinha que você arrasta pela barra ⠿ e deixa onde quiser; não escurece a tela.
 
-![Modo de edição](docs/edit.png)
+![Editor em janela móvel](docs/edit.png)
 
-**Novo projeto pelo modelo** — preencha todos os links e a pasta de uma vez; ele monta os botões pra você.
+**Novo projeto pelo modelo** — preencha todos os links e a pasta de uma vez (com o navegador do lado); ele monta os botões pra você.
 
 ![Criar projeto pelo modelo](docs/new-project.png)
 
-**Configurações (pela bandeja)** — mude o atalho de abertura apertando as teclas e ligue o início com o Windows.
+**Configurações** — atalho de abertura, iniciar com o Windows e opções de interface (tamanho, posição, fundo).
 
 ![Configurações](docs/settings.png)
 

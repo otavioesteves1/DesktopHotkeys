@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   // renderer -> main
   doHide: () => ipcRenderer.send('overlay:doHide'),
   runAction: (action) => ipcRenderer.send('action:run', action),
+  setMode: (mode) => ipcRenderer.send('window:mode', mode),
   // editor
   setEditMode: (on) => ipcRenderer.send('edit:setMode', on),
   saveConfig: (config) => ipcRenderer.invoke('config:save', config),

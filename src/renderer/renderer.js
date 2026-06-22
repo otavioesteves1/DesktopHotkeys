@@ -61,6 +61,8 @@ const editbtn = document.getElementById('editbtn');
 const editbadge = document.getElementById('editbadge');
 const btnTmpl = document.getElementById('btn-tmpl');
 const btnNewProj = document.getElementById('btn-newproj');
+const titlebarClose = document.getElementById('titlebar-close');
+let curMode = 'launcher';
 
 // ---------- Utilitários ----------
 function esc(s) {
@@ -83,6 +85,23 @@ function toast(msg) {
   if (!t) { t = document.createElement('div'); t.id = 'sd-toast'; t.className = 'sd-toast'; body.appendChild(t); }
   t.textContent = msg; t.classList.add('show');
   clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+// Aplica as opções de interface (tamanho / posição / fundo) salvas no config.
+function applyUI() {
+  const ui = (fullConfig && fullConfig.ui) || {};
+  const tam = ui.tamanho || 'medio';
+  const pos = ui.posicao || 'centro';
+  const fun = ui.fundo || 'escuro';
+  body.classList.remove('size-pequeno', 'size-medio', 'size-grande', 'pos-centro', 'pos-embaixo', 'bg-escuro', 'bg-leve', 'bg-nenhum');
+  body.classList.add('size-' + tam, 'pos-' + pos, 'bg-' + fun);
+}
+
+// Janela cheia (launcher) quando navegando; pequena e móvel quando editando/configurando.
+function applyWindowMode() {
+  const want = (editMode || view !== 'grid') ? 'float' : 'launcher';
+  body.classList.toggle('mode-float', want === 'float');
+  if (want !== curMode) { curMode = want; window.api.setMode(want); }
 }
 
 // Permite colar (Ctrl+V) uma imagem direto no campo: salva e usa o caminho.
@@ -258,6 +277,7 @@ function toggleEdit() {
 function showGrid() {
   leaveForm();
   render();
+  applyWindowMode();
   panel.focus();
 }
 
@@ -291,6 +311,7 @@ function openForm(node, isNew, index) {
   gridEl.style.display = 'none';
   editorEl.classList.add('is-on');
   buildForm(node);
+  applyWindowMode();
 }
 
 // ---------- Formulário ----------
@@ -491,6 +512,7 @@ function openTemplateEditor() {
   editorEl.classList.add('is-on');
   btnTmpl.style.display = 'none'; btnNewProj.style.display = 'none';
   renderTemplateEditor();
+  applyWindowMode();
 }
 
 function renderTemplateEditor() {
@@ -557,6 +579,7 @@ function openNewProject() {
   editorEl.classList.add('is-on');
   btnTmpl.style.display = 'none'; btnNewProj.style.display = 'none';
   renderNewProject();
+  applyWindowMode();
 }
 
 function renderNewProject() {
@@ -629,6 +652,7 @@ function openSettingsView(data) {
   editorEl.classList.add('is-on');
   btnTmpl.style.display = 'none'; btnNewProj.style.display = 'none';
   renderSettings();
+  applyWindowMode();
 }
 
 function prettyAccel(a) {
@@ -671,6 +695,9 @@ function setCaptureMsg(m) { const el = document.getElementById('set-msg'); if (e
 
 function renderSettings() {
   const cur = pendingCombo || settingsData.atalho;
+  const ui = (fullConfig && fullConfig.ui) || {};
+  const tam = ui.tamanho || 'medio', pos = ui.posicao || 'centro', fun = ui.fundo || 'escuro';
+  const seg = (k, v, sel, label) => `<button type="button" class="seg__btn ${v === sel ? 'is-sel' : ''}" data-ui="${k}" data-val="${v}">${label}</button>`;
   editorEl.innerHTML = `
     <div class="frow">
       <label class="flabel">Atalho para abrir o painel</label>
@@ -686,8 +713,33 @@ function renderSettings() {
         Iniciar junto com o Windows
       </label>
     </div>
+    <div class="overlay__divider" style="margin:4px 0 14px"></div>
+    <div class="frow">
+      <label class="flabel">Tamanho do painel</label>
+      <div class="seg">
+        ${seg('tamanho', 'pequeno', tam, 'Pequeno')}
+        ${seg('tamanho', 'medio', tam, 'Médio')}
+        ${seg('tamanho', 'grande', tam, 'Grande')}
+      </div>
+    </div>
+    <div class="frow">
+      <label class="flabel">Posição</label>
+      <div class="seg">
+        ${seg('posicao', 'centro', pos, 'Centro')}
+        ${seg('posicao', 'embaixo', pos, 'Embaixo')}
+      </div>
+    </div>
+    <div class="frow">
+      <label class="flabel">Fundo (foco)</label>
+      <div class="seg">
+        ${seg('fundo', 'escuro', fun, 'Escuro')}
+        ${seg('fundo', 'leve', fun, 'Leve')}
+        ${seg('fundo', 'nenhum', fun, 'Nenhum')}
+      </div>
+    </div>
+    <div class="fhint">As opções de interface valem no painel cheio — abra com o atalho pra ver.</div>
     <div class="formbtns">
-      <button type="button" id="set-salvar" class="fbtn primary">Salvar</button>
+      <button type="button" id="set-salvar" class="fbtn primary">Salvar e fechar</button>
       <button type="button" id="set-fechar" class="fbtn">Fechar</button>
     </div>`;
 
@@ -697,8 +749,18 @@ function renderSettings() {
     renderSettings();
     panel.focus();
   };
+  editorEl.querySelectorAll('[data-ui]').forEach(b => {
+    b.onclick = async () => {
+      const k = b.dataset.ui, v = b.dataset.val;
+      if (!fullConfig.ui) fullConfig.ui = {};
+      fullConfig.ui[k] = v;
+      editorEl.querySelectorAll('[data-ui="' + k + '"]').forEach(x => x.classList.toggle('is-sel', x === b));
+      applyUI();
+      await window.api.saveConfig(fullConfig);
+    };
+  });
   document.getElementById('set-salvar').onclick = saveSettings;
-  document.getElementById('set-fechar').onclick = () => showGrid();
+  document.getElementById('set-fechar').onclick = () => closeWithAnim();
   panel.focus();
 }
 
@@ -713,8 +775,7 @@ async function saveSettings() {
     if (!(r && r.ok)) { setCaptureMsg('Esse atalho está em uso por outro programa. Tente outro.'); return; }
     settingsData.atalho = pendingCombo; pendingCombo = null;
   }
-  toast('Configurações salvas ✓');
-  showGrid();
+  closeWithAnim();
 }
 
 // ---------- Teclado ----------
@@ -768,6 +829,7 @@ backdrop.addEventListener('click', () => { if (!editMode) closeWithAnim(); });
 editbtn.addEventListener('click', toggleEdit);
 btnTmpl.addEventListener('click', openTemplateEditor);
 btnNewProj.addEventListener('click', openNewProject);
+titlebarClose.addEventListener('click', () => closeWithAnim());
 
 // ---------- Arrastar pra reordenar ----------
 gridEl.addEventListener('dragstart', (e) => {
@@ -808,7 +870,8 @@ function resetHidden() {
   editorEl.classList.remove('is-on'); editorEl.innerHTML = '';
   gridEl.style.display = '';
   stack = [root]; page = 0; navDir = 'none';
-  body.classList.remove('is-visible', 'is-hiding');
+  curMode = 'launcher'; body.classList.remove('mode-float', 'is-visible', 'is-hiding');
+  applyUI();
   render();
 }
 
@@ -821,11 +884,14 @@ window.api.onOpen((config) => {
   page = 0; navDir = 'none'; busy = false;
 
   editMode = false; view = 'grid'; editing = null;
+  curMode = 'launcher';
   window.api.setEditMode(false);
   editbtn.classList.remove('is-on'); editbtn.textContent = '✏️ Editar';
   editbadge.classList.remove('is-on');
   editorEl.classList.remove('is-on'); editorEl.innerHTML = '';
   gridEl.style.display = '';
+  body.classList.remove('mode-float');
+  applyUI();
 
   body.classList.remove('is-hiding');
   panel.style.animation = 'none'; backdrop.style.animation = 'none';

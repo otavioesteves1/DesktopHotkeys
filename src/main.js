@@ -22,6 +22,8 @@ let tray = null;
 let suppressBlur = false; // evita fechar no instante em que abre
 let editMode = false;     // no modo edição o painel não fecha ao perder o foco
 let hotkey = DEFAULT_HOTKEY;
+let floatMode = false;   // janela pequena e móvel (modo edição/config)
+let floatBounds = null;  // posição/tamanho lembrados da janela flutuante
 
 // Garante uma única instância do app rodando.
 if (!app.requestSingleInstanceLock()) {
@@ -51,7 +53,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     resizable: false,
-    movable: false,
+    movable: true,
     minimizable: false,
     maximizable: false,
     skipTaskbar: true,
@@ -72,8 +74,13 @@ function createWindow() {
 
   // Some o overlay se perder o foco (ex.: Alt+Tab).
   win.on('blur', () => {
-    if (suppressBlur || editMode) return;
+    if (suppressBlur || editMode || floatMode) return;
     if (win && win.isVisible()) hideOverlay();
+  });
+
+  // Lembra onde o usuário deixou a janela flutuante.
+  win.on('moved', () => {
+    if (floatMode && win) floatBounds = win.getBounds();
   });
 }
 
@@ -88,9 +95,11 @@ function showOverlay() {
     return;
   }
 
-  // Abre no monitor onde está o cursor.
+  // Abre no monitor onde está o cursor, sempre em tela cheia (modo launcher).
   const pt = screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(pt);
+  floatMode = false;
+  win.setMovable(false);
   win.setBounds(display.bounds);
 
   editMode = false;
@@ -114,6 +123,27 @@ function hideOverlay() {
   if (!win) return;
   win.hide();
   win.webContents.send('overlay:reset');
+}
+
+// Alterna entre o painel cheio (launcher) e a janelinha flutuante móvel (edição/config).
+function setWindowMode(mode) {
+  if (!win) return;
+  const disp = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  if (mode === 'float') {
+    floatMode = true;
+    win.setMovable(true);
+    const wa = disp.workArea;
+    const w = 470;
+    const h = Math.min(720, wa.height - 60);
+    let x, y;
+    if (floatBounds) { x = floatBounds.x; y = floatBounds.y; }
+    else { x = wa.x + Math.round((wa.width - w) / 2); y = wa.y + Math.round((wa.height - h) / 2); }
+    win.setBounds({ x, y, width: w, height: h });
+  } else {
+    floatMode = false;
+    win.setMovable(false);
+    win.setBounds(disp.bounds);
+  }
 }
 
 // ---------- Execução das ações ----------
@@ -262,6 +292,8 @@ ipcMain.on('action:run', (_e, action) => {
 });
 
 ipcMain.on('edit:setMode', (_e, on) => { editMode = !!on; });
+
+ipcMain.on('window:mode', (_e, mode) => setWindowMode(mode));
 
 ipcMain.handle('config:save', (_e, config) => {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');

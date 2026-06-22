@@ -24,8 +24,11 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": ["nsis", "portable"],
       "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "DesktopHotkeys-${version}-portable.exe"
     },
     "nsis": {
       "oneClick": false,

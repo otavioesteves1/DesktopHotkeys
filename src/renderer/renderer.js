@@ -13,17 +13,19 @@ const ACOES = [
   { v: 'enviar_teclas',    t: 'Enviar teclas' }
 ];
 
-// Modelo padrão de projeto Autodesk (links + pasta do DesktopConnector)
+// Modelo padrão de projeto Autodesk — ordem QWER / ASDF / ZXCV (com 2 espaços vazios)
 const AUTODESK_MODEL = [
-  { label: 'Arquivos',        tipo: 'abrir_url',     icone: '📄' },
-  { label: 'Problemas',       tipo: 'abrir_url',     icone: '⚠️' },
-  { label: 'Membros',         tipo: 'abrir_url',     icone: '👥' },
-  { label: 'Configurações',   tipo: 'abrir_url',     icone: '⚙️' },
-  { label: 'DesignCollab',    tipo: 'abrir_url',     icone: '🤝' },
-  { label: 'Modelo',          tipo: 'abrir_url',     icone: '🏗️' },
-  { label: 'Vistas',          tipo: 'abrir_url',     icone: '👁️' },
-  { label: 'Interferências',  tipo: 'abrir_url',     icone: '🚧' },
-  { label: 'DesktopConnector', tipo: 'abrir_arquivo', icone: '🗂️' }
+  { label: 'Arquivos',         tipo: 'abrir_url',     icone: '📄' },
+  { label: 'DesignCollab',     tipo: 'abrir_url',     icone: '🤝' },
+  { label: 'Model Cord',       tipo: 'abrir_url',     icone: '🧩' },
+  { label: 'Modelo',           tipo: 'abrir_url',     icone: '🏗️' },
+  { label: 'Problemas',        tipo: 'abrir_url',     icone: '⚠️' },
+  { label: 'Vistas',           tipo: 'abrir_url',     icone: '👁️' },
+  { label: 'Interferências',   tipo: 'abrir_url',     icone: '🚧' },
+  { label: '',                 tipo: 'vazio' },
+  { label: 'DesktopConnector', tipo: 'abrir_arquivo', icone: '🗂️' },
+  { label: 'Membros',          tipo: 'abrir_url',     icone: '👥' },
+  { label: 'Configurações',    tipo: 'abrir_url',     icone: '⚙️' }
 ];
 
 // ---------- Estado ----------
@@ -474,8 +476,9 @@ function renderTemplateEditor() {
     <div class="trow" data-i="${i}">
       <input class="finput tm-label" type="text" placeholder="Nome do campo" value="${esc(f.label || '')}">
       <select class="fselect tm-tipo">
-        <option value="abrir_url" ${f.tipo !== 'abrir_arquivo' ? 'selected' : ''}>Site (link)</option>
+        <option value="abrir_url" ${(f.tipo !== 'abrir_arquivo' && f.tipo !== 'vazio') ? 'selected' : ''}>Site (link)</option>
         <option value="abrir_arquivo" ${f.tipo === 'abrir_arquivo' ? 'selected' : ''}>Pasta / arquivo</option>
+        <option value="vazio" ${f.tipo === 'vazio' ? 'selected' : ''}>Espaço vazio</option>
       </select>
       <button type="button" class="fbtn tm-up" title="Subir">↑</button>
       <button type="button" class="fbtn tm-down" title="Descer">↓</button>
@@ -516,7 +519,7 @@ function syncTmpl() {
 
 async function saveTemplate() {
   syncTmpl();
-  current().modelo = tmplWork.filter(f => f.label);
+  current().modelo = tmplWork.filter(f => f.label || f.tipo === 'vazio');
   await window.api.saveConfig(fullConfig);
   showGrid();
   toast('Modelo salvo ✓');
@@ -536,6 +539,7 @@ function openNewProject() {
 
 function renderNewProject() {
   const fields = npWork.map((f, i) => {
+    if (f.tipo === 'vazio') return '';
     const isFolder = f.tipo === 'abrir_arquivo';
     return `<div class="frow">
       <label class="flabel">${f.icone ? esc(f.icone) + ' ' : ''}${esc(f.label)}${isFolder ? ' (pasta)' : ' (link)'}</label>
@@ -573,6 +577,7 @@ async function saveNewProject() {
   const name = val('np-nome') || 'Novo projeto';
   const icone = val('np-icone');
   const children = npWork.map((f, i) => {
+    if (f.tipo === 'vazio') return null;
     const v = val('np-f-' + i);
     const node = { tipo: 'acao', label: f.label };
     if (f.icone) node.icone = f.icone;

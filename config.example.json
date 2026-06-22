@@ -8,6 +8,19 @@
         "tipo": "pasta",
         "label": "Autodesk",
         "icone": "🅰️",
+        "modelo": [
+          { "label": "Arquivos",         "tipo": "abrir_url",     "icone": "📄" },
+          { "label": "DesignCollab",     "tipo": "abrir_url",     "icone": "🤝" },
+          { "label": "Model Cord",       "tipo": "abrir_url",     "icone": "🧩" },
+          { "label": "Modelo",           "tipo": "abrir_url",     "icone": "🏗️" },
+          { "label": "Problemas",        "tipo": "abrir_url",     "icone": "⚠️" },
+          { "label": "Vistas",           "tipo": "abrir_url",     "icone": "👁️" },
+          { "label": "Interferências",   "tipo": "abrir_url",     "icone": "🚧" },
+          { "label": "",                 "tipo": "vazio" },
+          { "label": "DesktopConnector", "tipo": "abrir_arquivo", "icone": "🗂️" },
+          { "label": "Membros",          "tipo": "abrir_url",     "icone": "👥" },
+          { "label": "Configurações",    "tipo": "abrir_url",     "icone": "⚙️" }
+        ],
         "filhos": [
           {
             "tipo": "pasta",

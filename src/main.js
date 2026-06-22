@@ -321,6 +321,12 @@ app.whenReady().then(() => {
       showOverlay();
       editMode = true;
       await wait(700); await shot('streamdeck_selftest.png');
+      await win.webContents.executeJavaScript('activateByKey("q"); ');
+      await wait(150);
+      await win.webContents.executeJavaScript('activateByKey("q");');
+      await wait(250); await shot('streamdeck_selftest_repar.png');
+      await win.webContents.executeJavaScript('stack = [root]; navDir = "none"; render();');
+      await wait(150);
       await win.webContents.executeJavaScript('toggleEdit();');
       await wait(300); await shot('streamdeck_selftest_edit.png');
       await win.webContents.executeJavaScript('addAt(4); document.getElementById("f-acaotipo").value="abrir_arquivo"; document.getElementById("f-acaotipo").dispatchEvent(new Event("change"));');

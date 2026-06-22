@@ -54,10 +54,20 @@ npm install
 npm start
 ```
 
+## Configurações (pela bandeja)
+
+Botão direito no ícone da bandeja (perto do relógio) → **⚙️ Configurações**:
+
+- **Atalho para abrir o painel** — clique em "Mudar atalho" e aperte a combinação que quiser
+  (ex.: `Ctrl + Espaço`). Fica salvo no `config.json` (`"atalho"`).
+- **Iniciar junto com o Windows** — liga/desliga o atalho na pasta Inicializar.
+
+Também no menu da bandeja: **✏️ Editar tela inicial** (abre já no modo edição).
+
 ## Iniciar com o Windows
 
-Use o `DesktopHotkeys.vbs` (abre o app sem janela de console). Crie um atalho dele na pasta
-Inicializar do Windows (`shell:startup`) — ou empacote num `.exe` mais adiante.
+Liga pela tela de Configurações (acima), ou use o `DesktopHotkeys.vbs` (abre sem janela de
+console) com um atalho na pasta Inicializar (`shell:startup`).
 
 ## Licença
 

@@ -42,6 +42,9 @@ let delArmed = false;
 let dragSrc = null;
 let tmplWork = [];        // cópia de trabalho do modelo (editor de modelo)
 let npWork = [];          // campos do modelo ao criar novo projeto
+let capturing = false;    // capturando o atalho nas Configurações
+let pendingCombo = null;  // atalho capturado, ainda não salvo
+let settingsData = { atalho: '', autostart: false };
 
 // ---------- Elementos ----------
 const body = document.body;
@@ -589,8 +592,106 @@ async function saveNewProject() {
   toast('Projeto criado ✓');
 }
 
+// ---------- Configurações ----------
+function openSettingsView(data) {
+  if (data) settingsData = { atalho: data.atalho || '', autostart: !!data.autostart };
+  pendingCombo = null; capturing = false;
+  view = 'settings';
+  gridEl.style.display = 'none';
+  editorEl.classList.add('is-on');
+  btnTmpl.style.display = 'none'; btnNewProj.style.display = 'none';
+  renderSettings();
+}
+
+function prettyAccel(a) {
+  return String(a || '').replace(/Control/g, 'Ctrl').replace(/Super/g, 'Win').split('+').join(' + ');
+}
+
+function mainKey(e) {
+  const k = e.key;
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(k)) return null;
+  if (k === ' ') return 'Space';
+  if (/^[a-z]$/i.test(k)) return k.toUpperCase();
+  if (/^[0-9]$/.test(k)) return k;
+  if (/^F\d{1,2}$/.test(k)) return k;
+  const map = { ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Enter: 'Return', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', Insert: 'Insert', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown' };
+  if (map[k]) return map[k];
+  if (k.length === 1) return k.toUpperCase();
+  return null;
+}
+
+function captureKey(e) {
+  e.preventDefault();
+  const key = mainKey(e);
+  if (!key) return; // só apertou modificador; espera a tecla principal
+  const isF = /^F\d{1,2}$/.test(key);
+  if (!(e.ctrlKey || e.altKey || e.metaKey) && !isF) {
+    setCaptureMsg('Use Ctrl, Alt ou Win junto com a tecla (ou uma tecla F).');
+    return;
+  }
+  const mods = [];
+  if (e.ctrlKey) mods.push('Control');
+  if (e.shiftKey) mods.push('Shift');
+  if (e.altKey) mods.push('Alt');
+  if (e.metaKey) mods.push('Super');
+  pendingCombo = mods.concat(key).join('+');
+  capturing = false;
+  renderSettings();
+}
+
+function setCaptureMsg(m) { const el = document.getElementById('set-msg'); if (el) el.textContent = m; }
+
+function renderSettings() {
+  const cur = pendingCombo || settingsData.atalho;
+  editorEl.innerHTML = `
+    <div class="frow">
+      <label class="flabel">Atalho para abrir o painel</label>
+      <div class="frow-inline">
+        <div class="keycap ${capturing ? 'rec' : ''}" id="set-key">${capturing ? 'Aperte as teclas…' : esc(prettyAccel(cur) || '—')}</div>
+        <button type="button" id="set-rec" class="fbtn">${capturing ? 'Cancelar' : 'Mudar atalho'}</button>
+      </div>
+      <div class="fhint" id="set-msg">Use Ctrl, Alt ou Win + uma tecla. Ex.: Ctrl + Espaço, Alt + Q.</div>
+    </div>
+    <div class="frow">
+      <label class="flabel" style="cursor:pointer">
+        <input type="checkbox" id="set-auto" ${settingsData.autostart ? 'checked' : ''} style="vertical-align:-2px;margin-right:8px">
+        Iniciar junto com o Windows
+      </label>
+    </div>
+    <div class="formbtns">
+      <button type="button" id="set-salvar" class="fbtn primary">Salvar</button>
+      <button type="button" id="set-fechar" class="fbtn">Fechar</button>
+    </div>`;
+
+  document.getElementById('set-rec').onclick = () => {
+    capturing = !capturing;
+    if (capturing) pendingCombo = null;
+    renderSettings();
+    panel.focus();
+  };
+  document.getElementById('set-salvar').onclick = saveSettings;
+  document.getElementById('set-fechar').onclick = () => showGrid();
+  panel.focus();
+}
+
+async function saveSettings() {
+  const auto = document.getElementById('set-auto').checked;
+  if (auto !== settingsData.autostart) {
+    await window.api.setAutostart(auto);
+    settingsData.autostart = auto;
+  }
+  if (pendingCombo && pendingCombo !== settingsData.atalho) {
+    const r = await window.api.setHotkey(pendingCombo);
+    if (!(r && r.ok)) { setCaptureMsg('Esse atalho está em uso por outro programa. Tente outro.'); return; }
+    settingsData.atalho = pendingCombo; pendingCombo = null;
+  }
+  toast('Configurações salvas ✓');
+  showGrid();
+}
+
 // ---------- Teclado ----------
 window.addEventListener('keydown', (e) => {
+  if (capturing) { captureKey(e); return; }
   const tag = (e.target.tagName || '').toLowerCase();
   const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
 
@@ -692,3 +793,5 @@ window.api.onOpen((config) => {
 });
 
 window.api.onHide(() => closeWithAnim());
+window.api.onSettings((data) => openSettingsView(data));
+window.api.onEditMode(() => { if (!editMode) toggleEdit(); });

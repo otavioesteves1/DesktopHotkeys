@@ -6,13 +6,18 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
-const HOTKEY = 'Control+Shift+Alt+P';
+const DEFAULT_HOTKEY = 'Control+Shift+Alt+P';
 const CONFIG_PATH = path.join(app.getAppPath(), 'config.json');
+const STARTUP_LNK = path.join(
+  process.env.APPDATA || '',
+  'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'DesktopHotkeys.lnk'
+);
 
 let win = null;
 let tray = null;
 let suppressBlur = false; // evita fechar no instante em que abre
 let editMode = false;     // no modo edição o painel não fecha ao perder o foco
+let hotkey = DEFAULT_HOTKEY;
 
 // Garante uma única instância do app rodando.
 if (!app.requestSingleInstanceLock()) {
@@ -154,16 +159,70 @@ function notify(title, body) {
   try { new Notification({ title, body }).show(); } catch (e) { /* ignore */ }
 }
 
+// ---------- Atalho global ----------
+function readHotkey() {
+  try { return getConfig().atalho || DEFAULT_HOTKEY; } catch (e) { return DEFAULT_HOTKEY; }
+}
+function prettyKey(accel) {
+  return String(accel || '').replace(/Control/g, 'Ctrl').replace(/Super/g, 'Win').split('+').join(' + ');
+}
+function registerHotkey() {
+  globalShortcut.unregisterAll();
+  const ok = globalShortcut.register(hotkey, toggleOverlay);
+  if (!ok) notify('Atalho indisponível', prettyKey(hotkey) + ' já está em uso por outro programa.');
+  return ok;
+}
+function persistHotkey(accel) {
+  try {
+    const cfg = getConfig();
+    cfg.atalho = accel;
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+  } catch (e) { /* ignore */ }
+}
+
+// ---------- Iniciar com o Windows ----------
+function psStr(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
+function isAutostart() { try { return fs.existsSync(STARTUP_LNK); } catch (e) { return false; } }
+function setAutostart(on) {
+  if (on) {
+    const vbs = path.join(app.getAppPath(), 'DesktopHotkeys.vbs');
+    const ps = '$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut(' + psStr(STARTUP_LNK) +
+      ');$s.TargetPath=' + psStr('C:\\Windows\\System32\\wscript.exe') +
+      ';$s.Arguments=' + psStr('"' + vbs + '"') +
+      ';$s.WorkingDirectory=' + psStr(app.getAppPath()) +
+      ';$s.IconLocation=' + psStr(process.execPath + ',0') + ';$s.Save()';
+    spawn('powershell.exe', ['-NoProfile', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  } else {
+    try { fs.unlinkSync(STARTUP_LNK); } catch (e) { /* ignore */ }
+  }
+}
+
+// ---------- Bandeja ----------
+function openSettings() {
+  showOverlay();
+  if (win) win.webContents.send('overlay:settings', { atalho: hotkey, autostart: isAutostart() });
+}
+function openEditHome() {
+  showOverlay();
+  if (win) win.webContents.send('overlay:editmode');
+}
+
 function createTray() {
   const iconPath = path.join(app.getAppPath(), 'assets', 'tray.png');
   let icon = nativeImage.createFromPath(iconPath);
   if (icon.isEmpty()) icon = nativeImage.createEmpty();
-
   tray = new Tray(icon);
-  tray.setToolTip('DesktopHotkeys — Ctrl+Shift+Alt+P');
+  tray.on('click', () => showOverlay());
+  refreshTray();
+}
 
+function refreshTray() {
+  if (!tray) return;
+  tray.setToolTip('DesktopHotkeys — ' + prettyKey(hotkey));
   const menu = Menu.buildFromTemplate([
-    { label: 'Abrir painel  (Ctrl+Shift+Alt+P)', click: () => showOverlay() },
+    { label: 'Abrir painel  (' + prettyKey(hotkey) + ')', click: () => showOverlay() },
+    { label: '✏️  Editar tela inicial', click: () => openEditHome() },
+    { label: '⚙️  Configurações (atalho, iniciar com Windows)…', click: () => openSettings() },
     { type: 'separator' },
     { label: 'Editar atalhos (config.json)', click: () => shell.openPath(CONFIG_PATH) },
     { label: 'Abrir pasta do app', click: () => shell.openPath(app.getAppPath()) },
@@ -171,7 +230,6 @@ function createTray() {
     { label: 'Sair', click: () => app.quit() }
   ]);
   tray.setContextMenu(menu);
-  tray.on('click', () => showOverlay());
 }
 
 // ---------- IPC (renderer -> main) ----------
@@ -219,16 +277,31 @@ ipcMain.handle('dialog:pickFolder', async () => {
   return (r.canceled || !r.filePaths.length) ? null : r.filePaths[0];
 });
 
+ipcMain.handle('settings:get', () => ({ atalho: hotkey, autostart: isAutostart() }));
+
+ipcMain.handle('settings:setHotkey', (_e, accel) => {
+  const prev = hotkey;
+  hotkey = accel;
+  if (registerHotkey()) {
+    persistHotkey(accel);
+    refreshTray();
+    return { ok: true };
+  }
+  hotkey = prev;       // não conseguiu registrar; volta pro anterior
+  registerHotkey();
+  return { ok: false };
+});
+
+ipcMain.handle('settings:setAutostart', (_e, on) => { setAutostart(!!on); return !!on; });
+
 // ---------- Ciclo de vida ----------
 app.whenReady().then(() => {
   ensureConfig();
   createWindow();
   createTray();
 
-  const ok = globalShortcut.register(HOTKEY, toggleOverlay);
-  if (!ok) {
-    notify('Atalho indisponível', 'Ctrl+Shift+Alt+P já está em uso por outro programa.');
-  }
+  hotkey = readHotkey();
+  registerHotkey();
 
   // Autoteste: abre o painel, salva PNGs e fecha. Ligado só por variável de ambiente.
   if (process.env.STREAMDECK_SELFTEST) {
@@ -256,6 +329,10 @@ app.whenReady().then(() => {
       await wait(300); await shot('streamdeck_selftest_tmpl.png');
       await win.webContents.executeJavaScript('showGrid(); current().modelo = AUTODESK_MODEL; render(); openNewProject();');
       await wait(300); await shot('streamdeck_selftest_newproj.png');
+      await win.webContents.executeJavaScript('showGrid(); openSettingsView({ atalho: "Control+Shift+Alt+P", autostart: true });');
+      await wait(250); await shot('streamdeck_selftest_settings.png');
+      await win.webContents.executeJavaScript('capturing = true; window.dispatchEvent(new KeyboardEvent("keydown", { key: "q", ctrlKey: true, altKey: true, bubbles: true }));');
+      await wait(250); await shot('streamdeck_selftest_settings2.png');
       app.quit();
     });
   }

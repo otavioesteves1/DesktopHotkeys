@@ -345,6 +345,15 @@ body.is-hiding .overlay__panel { animation: overlay-out 130ms cubic-bezier(0.4, 
 .trow .tm-tipo { width: 150px; }
 .trow .fbtn { padding: 8px 11px; }
 
+/* Captura de atalho (Configurações) */
+.keycap {
+  flex: 1; display: flex; align-items: center; min-height: 38px;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-card); color: var(--text);
+  font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.03em;
+}
+.keycap.rec { border-color: var(--accent); color: var(--accent); }
+
 /* Aviso flutuante */
 .sd-toast {
   position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%);

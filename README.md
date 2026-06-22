@@ -1,74 +1,139 @@
-# DesktopHotkeys
+<div align="center">
 
-Painel de atalhos para Windows que abre por cima de tudo com um atalho de teclado — estilo "Stream Deck", só que via teclado. Cada quadradinho abre um site/programa, roda um comando, ou abre outra pasta de quadradinhos (sem limite de profundidade). Feito em Electron.
+# 🎛️ DesktopHotkeys
 
-![Painel](docs/preview.png)
+### Seu painel de atalhos pessoal — abre por cima de tudo com um toque, controlado pelo teclado.
 
-## Como usar
+Pense num **Stream Deck**, mas dentro do PC e usando o teclado: aperta um atalho, aparece um quadro de botões, e cada botão abre um site, um programa, uma pasta — ou outro quadro de botões.
 
-Grade fixa de 12 lugares com teclas no estilo StarCraft:
+![Painel do DesktopHotkeys](docs/hero.png)
+
+</div>
+
+---
+
+## ✨ O que é?
+
+O **DesktopHotkeys** é um lançador (launcher) para Windows. Você aperta um atalho global
+(de fábrica `Ctrl + Shift + Alt + P`) e um painel aparece sobre qualquer janela. Cada
+quadradinho é:
+
+- **⚡ uma Ação** — abre um site, abre um programa/arquivo/pasta, roda um comando, copia um texto; ou
+- **📁 uma Pasta** — abre outro quadro de botões (sem limite de profundidade).
+
+Tudo na ponta dos dedos: você nunca tira a mão do teclado.
+
+---
+
+## ⌨️ Como funciona
+
+Os botões ficam numa grade fixa de **12 lugares**, com teclas no estilo **StarCraft** —
+fáceis de alcançar com a mão esquerda:
 
 ```
-Q  W  E  R
-A  S  D  F
-Z  X  C  V
+ Q   W   E   R
+ A   S   D   F
+ Z   X   C   V
 ```
 
-- **Abrir / fechar:** `Ctrl + Shift + Alt + P`
-- **Escolher:** aperte a letra do quadradinho (`Q W E R / A S D F / Z X C V`)
-- **Voltar uma pasta:** `Esc` ou `Backspace`
-- **Ir pro início:** `Home`
-- **Trocar de página** (mais de 12 itens): `Tab` ou setas `←` `→`
-- Lugares vazios ("buracos") ficam visíveis, então cada botão mantém sempre a mesma tecla.
-- O app fica na **bandeja** (perto do relógio). Botão direito → editar atalhos, abrir pasta, sair.
+- Apertou a letra → ativa o botão daquele lugar.
+- Lugares **vazios ("buracos")** ficam visíveis de propósito: assim cada botão fica
+  **sempre na mesma tecla**, e vira memória muscular.
+- `Esc` / `Backspace` volta uma pasta · `Home` volta pro início · `Tab` / `← →` troca de página.
+- Aperta o atalho global de novo (ou clica fora) → fecha tudo.
 
-## Editar pela interface (sem mexer em arquivo)
+> 💡 Exemplo: `Q` (Autodesk) → `Q` (seu projeto) → `A` (Problemas) e o site abre. Um segundo.
 
-Abra o painel → **✏️ Editar** (ou `Ctrl+E`). Aí dá pra:
+---
 
-- Clicar num lugar vazio (**＋**) pra criar, ou num botão pra editar.
-- Definir nome, **ícone (emoji ou imagem/GIF)**, tipo (📁 Pasta ou ⚡ Ação) e, na ação, o que ela faz.
-- **Arrastar** um botão para mover/reordenar entre os lugares.
-- **🧩 Modelo** — define os campos padrão de um "projeto" (ex.: Autodesk: Arquivos, Problemas, Membros…), reordenáveis.
-- **➕ Novo projeto** — com o modelo definido, cria um projeto preenchendo todos os links e a pasta numa tela só.
+## 🚀 Recursos
 
-## Editar pelo arquivo
+- 🎯 **Acesso em 1 segundo**, 100% pelo teclado
+- 🗂️ **Pastas dentro de pastas** sem limite
+- 🖼️ **Ícone** com emoji **ou imagem/GIF**
+- ✏️ **Editor visual** dentro do app — sem mexer em arquivo
+- 🧲 **Arrastar pra reordenar** os botões
+- 🧩 **Modelos de projeto** — crie um projeto novo preenchendo todos os links e pastas numa tela só
+- ⚙️ **Configurável pela bandeja** — troque o atalho de abertura e ligue "iniciar com o Windows"
+- 🔒 Sua configuração (`config.json`) fica **só na sua máquina**
 
-A configuração fica em **`config.json`** (criado a partir de `config.example.json` na primeira execução).
-Cada item é uma `pasta` (lista `filhos`) ou uma `acao` (bloco `acao`). O número é automático, pela ordem.
+---
 
-Tipos de ação:
+## 📸 Telas
 
-| Tipo | O que faz | Campos |
-|------|-----------|--------|
-| `abrir_url` | abre um site | `url` |
-| `abrir_arquivo` | abre programa/arquivo/pasta | `caminho` (e opcional `argumentos`) |
-| `executar_comando` | roda um comando | `comando`, `shell` (`cmd`/`powershell`) |
-| `copiar_texto` | copia texto pra área de transferência | `texto` |
-| `enviar_teclas` | envia teclas pro app que estava aberto | `teclas` |
+**Modo de edição** — clique num lugar vazio (`＋`) pra criar, ou num botão pra editar; arraste pra mover.
 
-## Rodar (desenvolvimento)
+![Modo de edição](docs/edit.png)
+
+**Novo projeto pelo modelo** — preencha todos os links e a pasta de uma vez; ele monta os botões pra você.
+
+![Criar projeto pelo modelo](docs/new-project.png)
+
+**Configurações (pela bandeja)** — mude o atalho de abertura apertando as teclas e ligue o início com o Windows.
+
+![Configurações](docs/settings.png)
+
+---
+
+## 📦 Rodar (desenvolvimento)
+
+Precisa do [Node.js](https://nodejs.org) instalado.
 
 ```bash
+git clone https://github.com/otavioesteves1/DesktopHotkeys.git
+cd DesktopHotkeys
 npm install
 npm start
 ```
 
-## Configurações (pela bandeja)
+Na primeira vez, o app cria seu `config.json` a partir do `config.example.json`.
 
-Botão direito no ícone da bandeja (perto do relógio) → **⚙️ Configurações**:
+---
 
-- **Atalho para abrir o painel** — clique em "Mudar atalho" e aperte a combinação que quiser
-  (ex.: `Ctrl + Espaço`). Fica salvo no `config.json` (`"atalho"`).
-- **Iniciar junto com o Windows** — liga/desliga o atalho na pasta Inicializar.
+## 🏗️ Gerar o executável (.exe)
 
-Também no menu da bandeja: **✏️ Editar tela inicial** (abre já no modo edição).
+```bash
+npm install
+npm run dist
+```
 
-## Iniciar com o Windows
+O instalador do Windows é gerado na pasta **`dist/`** (ex.: `DesktopHotkeys Setup x.y.z.exe`).
+Depois de instalado, o app fica na **bandeja** (perto do relógio) e sobe com o atalho global.
 
-Liga pela tela de Configurações (acima), ou use o `DesktopHotkeys.vbs` (abre sem janela de
-console) com um atalho na pasta Inicializar (`shell:startup`).
+---
 
-## Licença
+## ⚙️ Configuração
 
-MIT
+Você edita de dois jeitos (os dois convivem):
+
+1. **Pela interface** — abra o painel → **✏️ Editar** (ou `Ctrl+E`) → clique nos botões.
+2. **Pelo arquivo** — bandeja → botão direito → **Editar atalhos (config.json)**.
+
+Onde fica o `config.json`:
+
+| Situação | Local |
+|----------|-------|
+| Rodando do código (`npm start`) | pasta do projeto |
+| Instalado (.exe) | `%APPDATA%\DesktopHotkeys\config.json` |
+
+### Tipos de ação
+
+| Tipo | O que faz | Campos |
+|------|-----------|--------|
+| `abrir_url` | abre um site | `url` |
+| `abrir_arquivo` | abre programa / arquivo / pasta | `caminho` (e opcional `argumentos`) |
+| `executar_comando` | roda um comando | `comando`, `shell` (`cmd` / `powershell`) |
+| `copiar_texto` | copia texto pra área de transferência | `texto` |
+| `enviar_teclas` | envia teclas pro app que estava aberto | `teclas` |
+
+Cada item é uma `pasta` (com lista `filhos`) ou uma `acao` (com bloco `acao`). A posição na
+lista define a tecla (`null` = lugar vazio). Uma pasta pode ter um `modelo` (campos padrão
+para criar projetos novos).
+
+---
+
+<div align="center">
+
+Feito com Electron · Licença MIT
+
+</div>

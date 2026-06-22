@@ -1,14 +1,38 @@
 {
   "name": "desktop-hotkeys",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "description": "DesktopHotkeys — painel de atalhos (launcher overlay) por atalho global no Windows",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder",
+    "pack": "electron-builder --dir"
   },
   "author": "Otavio",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.otavio.desktophotkeys",
+    "productName": "DesktopHotkeys",
+    "files": [
+      "src/**/*",
+      "config.example.json",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "DesktopHotkeys"
+    }
   }
 }

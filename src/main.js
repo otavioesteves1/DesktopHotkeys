@@ -7,7 +7,11 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 
 const DEFAULT_HOTKEY = 'Control+Shift+Alt+P';
-const CONFIG_PATH = path.join(app.getAppPath(), 'config.json');
+// Em dev o config fica na pasta do projeto; empacotado (.exe) fica numa pasta gravável.
+const EXAMPLE_PATH = path.join(app.getAppPath(), 'config.example.json');
+const CONFIG_PATH = app.isPackaged
+  ? path.join(app.getPath('userData'), 'config.json')
+  : path.join(app.getAppPath(), 'config.json');
 const STARTUP_LNK = path.join(
   process.env.APPDATA || '',
   'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'DesktopHotkeys.lnk'
@@ -28,8 +32,7 @@ if (!app.requestSingleInstanceLock()) {
 // Na primeira vez (sem config.json) cria a partir do modelo config.example.json.
 function ensureConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
-    const ex = path.join(app.getAppPath(), 'config.example.json');
-    if (fs.existsSync(ex)) fs.copyFileSync(ex, CONFIG_PATH);
+    if (fs.existsSync(EXAMPLE_PATH)) fs.copyFileSync(EXAMPLE_PATH, CONFIG_PATH);
   }
 }
 
@@ -185,11 +188,20 @@ function psStr(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
 function isAutostart() { try { return fs.existsSync(STARTUP_LNK); } catch (e) { return false; } }
 function setAutostart(on) {
   if (on) {
-    const vbs = path.join(app.getAppPath(), 'DesktopHotkeys.vbs');
+    let target, args, workdir;
+    if (app.isPackaged) {
+      target = process.execPath;                 // o próprio .exe instalado
+      args = '';
+      workdir = path.dirname(process.execPath);
+    } else {
+      target = 'C:\\Windows\\System32\\wscript.exe';
+      args = '"' + path.join(app.getAppPath(), 'DesktopHotkeys.vbs') + '"';
+      workdir = app.getAppPath();
+    }
     const ps = '$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut(' + psStr(STARTUP_LNK) +
-      ');$s.TargetPath=' + psStr('C:\\Windows\\System32\\wscript.exe') +
-      ';$s.Arguments=' + psStr('"' + vbs + '"') +
-      ';$s.WorkingDirectory=' + psStr(app.getAppPath()) +
+      ');$s.TargetPath=' + psStr(target) +
+      ';$s.Arguments=' + psStr(args) +
+      ';$s.WorkingDirectory=' + psStr(workdir) +
       ';$s.IconLocation=' + psStr(process.execPath + ',0') + ';$s.Save()';
     spawn('powershell.exe', ['-NoProfile', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   } else {
@@ -225,7 +237,7 @@ function refreshTray() {
     { label: '⚙️  Configurações (atalho, iniciar com Windows)…', click: () => openSettings() },
     { type: 'separator' },
     { label: 'Editar atalhos (config.json)', click: () => shell.openPath(CONFIG_PATH) },
-    { label: 'Abrir pasta do app', click: () => shell.openPath(app.getAppPath()) },
+    { label: 'Abrir pasta da configuração', click: () => shell.openPath(path.dirname(CONFIG_PATH)) },
     { type: 'separator' },
     { label: 'Sair', click: () => app.quit() }
   ]);
@@ -315,6 +327,14 @@ app.whenReady().then(() => {
         console.log('SELFTEST_SAVED ' + out);
       } catch (e) { console.log('SELFTEST_ERR ' + e.message); }
     };
+    const shotPanel = async (name) => {
+      try {
+        const r = await win.webContents.executeJavaScript('(()=>{const p=document.querySelector(".overlay__panel");const b=p.getBoundingClientRect();return {x:Math.max(0,Math.round(b.x)),y:Math.max(0,Math.round(b.y)),width:Math.round(b.width),height:Math.round(b.height)};})()');
+        const img = await win.webContents.capturePage(r);
+        fs.writeFileSync(path.join(tmp, name), img.toPNG());
+        console.log('SELFTEST_PANEL ' + name);
+      } catch (e) { console.log('SELFTEST_ERR ' + e.message); }
+    };
     const wait = (ms) => new Promise(r => setTimeout(r, ms));
     win.webContents.once('did-finish-load', async () => {
       editMode = true; // não fecha por blur durante o teste
@@ -325,20 +345,22 @@ app.whenReady().then(() => {
       await wait(150);
       await win.webContents.executeJavaScript('activateByKey("q");');
       await wait(250); await shot('streamdeck_selftest_repar.png');
+      await win.webContents.executeJavaScript('current().label = "Projeto Exemplo - ABC-1234"; render();');
+      await wait(150); await shotPanel('readme_hero.png');
       await win.webContents.executeJavaScript('stack = [root]; navDir = "none"; render();');
       await wait(150);
       await win.webContents.executeJavaScript('toggleEdit();');
-      await wait(300); await shot('streamdeck_selftest_edit.png');
+      await wait(300); await shot('streamdeck_selftest_edit.png'); await shotPanel('readme_edit.png');
       await win.webContents.executeJavaScript('addAt(4); document.getElementById("f-acaotipo").value="abrir_arquivo"; document.getElementById("f-acaotipo").dispatchEvent(new Event("change"));');
       await wait(300); await shot('streamdeck_selftest_form.png');
       await win.webContents.executeJavaScript('showGrid(); openTemplateEditor(); document.getElementById("tm-preset").click();');
       await wait(300); await shot('streamdeck_selftest_tmpl.png');
       await win.webContents.executeJavaScript('showGrid(); current().modelo = AUTODESK_MODEL; render(); openNewProject();');
-      await wait(300); await shot('streamdeck_selftest_newproj.png');
+      await wait(300); await shot('streamdeck_selftest_newproj.png'); await shotPanel('readme_newproj.png');
       await win.webContents.executeJavaScript('showGrid(); openSettingsView({ atalho: "Control+Shift+Alt+P", autostart: true });');
       await wait(250); await shot('streamdeck_selftest_settings.png');
       await win.webContents.executeJavaScript('capturing = true; window.dispatchEvent(new KeyboardEvent("keydown", { key: "q", ctrlKey: true, altKey: true, bubbles: true }));');
-      await wait(250); await shot('streamdeck_selftest_settings2.png');
+      await wait(250); await shot('streamdeck_selftest_settings2.png'); await shotPanel('readme_settings.png');
       app.quit();
     });
   }

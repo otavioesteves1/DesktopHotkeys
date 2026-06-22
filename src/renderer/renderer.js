@@ -85,6 +85,26 @@ function toast(msg) {
   clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 1500);
 }
 
+// Permite colar (Ctrl+V) uma imagem direto no campo: salva e usa o caminho.
+// Se for texto/URL, deixa colar normalmente.
+function attachImagePaste(inputEl) {
+  if (!inputEl) return;
+  inputEl.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const it of items) {
+      if (it.type && it.type.indexOf('image') === 0) {
+        e.preventDefault();
+        const file = it.getAsFile();
+        if (!file) return;
+        const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); });
+        const p = await window.api.savePastedImage(dataUrl);
+        if (p) { inputEl.value = p; toast('Imagem colada ✓'); }
+        return;
+      }
+    }
+  });
+}
+
 // ---------- Ícone ----------
 function iconHTML(tile) {
   const ic = tile.icone;
@@ -284,9 +304,10 @@ function buildForm(node) {
     <div class="frow">
       <label class="flabel">Ícone</label>
       <div class="frow-inline">
-        <input id="f-icone" class="finput" type="text" placeholder="Cole um emoji, ou escolha uma imagem/GIF" value="${esc(node.icone || '')}">
+        <input id="f-icone" class="finput" type="text" placeholder="Emoji, link de imagem, ou Ctrl+V uma imagem" value="${esc(node.icone || '')}">
         <button type="button" id="f-img" class="fbtn">Imagem/GIF...</button>
       </div>
+      <div class="fhint">Dica: cole um emoji, cole o link de uma imagem/GIF, ou copie uma imagem e dê <b>Ctrl+V</b> aqui.</div>
       <div class="emojis" id="f-emojis">${EMOJIS.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
     </div>
     <div class="frow">
@@ -315,6 +336,7 @@ function buildForm(node) {
     const p = await window.api.pickImage();
     if (p) document.getElementById('f-icone').value = p;
   });
+  attachImagePaste(document.getElementById('f-icone'));
   editorEl.querySelectorAll('.seg__btn').forEach(b => {
     b.addEventListener('click', () => {
       editingTipo = b.dataset.tipo;
@@ -570,6 +592,7 @@ function renderNewProject() {
   });
   document.getElementById('np-salvar').onclick = saveNewProject;
   document.getElementById('np-cancelar').onclick = () => showGrid();
+  attachImagePaste(document.getElementById('np-icone'));
   document.getElementById('np-nome').focus();
 }
 

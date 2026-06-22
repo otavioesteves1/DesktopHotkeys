@@ -97,8 +97,16 @@ npm install
 npm run dist
 ```
 
-O instalador do Windows é gerado na pasta **`dist/`** (ex.: `DesktopHotkeys Setup x.y.z.exe`).
-Depois de instalado, o app fica na **bandeja** (perto do relógio) e sobe com o atalho global.
+O instalador do Windows é gerado na pasta **`dist/`** (ex.: `DesktopHotkeys Setup x.y.z.exe`),
+junto com uma versão **portátil** (`DesktopHotkeys-x.y.z-portable.exe`) que roda sem instalar.
+Depois de aberto, o app fica na **bandeja** (perto do relógio) e sobe com o atalho global.
+
+## 🔄 Atualizar sem perder suas configurações
+
+Suas configurações ficam em **`%APPDATA%\DesktopHotkeys\`** — uma pasta **separada do programa**.
+Por isso, ao baixar uma versão nova (pelos [Releases](https://github.com/otavioesteves1/DesktopHotkeys/releases))
+e abrir por cima, **seus botões, atalhos e ícones continuam intactos**. O app só cria a configuração
+inicial se ainda não existir; ele nunca apaga a sua.
 
 ---
 

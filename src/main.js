@@ -306,6 +306,20 @@ ipcMain.handle('settings:setHotkey', (_e, accel) => {
 
 ipcMain.handle('settings:setAutostart', (_e, on) => { setAutostart(!!on); return !!on; });
 
+// Salva uma imagem colada (Ctrl+V) numa pasta gravável e devolve o caminho.
+ipcMain.handle('icon:savePasted', (_e, dataUrl) => {
+  try {
+    const m = /^data:image\/(\w+);base64,(.+)$/.exec(dataUrl || '');
+    if (!m) return null;
+    const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
+    const dir = path.join(app.getPath('userData'), 'icons');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'icon_' + Date.now() + '.' + ext);
+    fs.writeFileSync(file, Buffer.from(m[2], 'base64'));
+    return file;
+  } catch (e) { return null; }
+});
+
 // ---------- Ciclo de vida ----------
 app.whenReady().then(() => {
   ensureConfig();

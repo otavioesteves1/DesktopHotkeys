@@ -292,6 +292,11 @@ body.is-hiding .overlay__panel { animation: overlay-out 130ms cubic-bezier(0.4, 
 }
 .ftext { resize: vertical; min-height: 64px; }
 .fselect { appearance: none; cursor: pointer; }
+/* O popup da lista suspensa usa as cores da option — força tema escuro legível */
+.fselect option, .fselect optgroup {
+  background-color: #161b22;
+  color: #e6edf3;
+}
 
 .frow-inline { display: flex; gap: 8px; align-items: center; }
 .frow-inline .finput { flex: 1; }

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   pickFile: () => ipcRenderer.invoke('dialog:pickFile'),
   pickImage: () => ipcRenderer.invoke('dialog:pickImage'),
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
+  savePastedImage: (dataUrl) => ipcRenderer.invoke('icon:savePasted', dataUrl),
   // configurações
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setHotkey: (accel) => ipcRenderer.invoke('settings:setHotkey', accel),

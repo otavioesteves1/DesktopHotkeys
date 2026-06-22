@@ -797,6 +797,23 @@ gridEl.addEventListener('dragend', () => {
 });
 
 // ---------- Ponte com o main ----------
+// Ao esconder, volta pro início e fica invisível — evita "flash" do estado anterior ao reabrir.
+function resetHidden() {
+  if (!root) return;
+  capturing = false; busy = false;
+  editMode = false; view = 'grid'; editing = null;
+  window.api.setEditMode(false);
+  editbtn.classList.remove('is-on'); editbtn.textContent = '✏️ Editar';
+  editbadge.classList.remove('is-on');
+  editorEl.classList.remove('is-on'); editorEl.innerHTML = '';
+  gridEl.style.display = '';
+  stack = [root]; page = 0; navDir = 'none';
+  body.classList.remove('is-visible', 'is-hiding');
+  render();
+}
+
+window.api.onReset(() => resetHidden());
+
 window.api.onOpen((config) => {
   fullConfig = config;
   root = config.raiz;

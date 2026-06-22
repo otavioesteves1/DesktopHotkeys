@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   onHide: (cb) => ipcRenderer.on('overlay:hide', () => cb()),
   onSettings: (cb) => ipcRenderer.on('overlay:settings', (_e, data) => cb(data)),
   onEditMode: (cb) => ipcRenderer.on('overlay:editmode', () => cb()),
+  onReset: (cb) => ipcRenderer.on('overlay:reset', () => cb()),
   // renderer -> main
   doHide: () => ipcRenderer.send('overlay:doHide'),
   runAction: (action) => ipcRenderer.send('action:run', action),

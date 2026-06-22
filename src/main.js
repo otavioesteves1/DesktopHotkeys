@@ -73,7 +73,7 @@ function createWindow() {
   // Some o overlay se perder o foco (ex.: Alt+Tab).
   win.on('blur', () => {
     if (suppressBlur || editMode) return;
-    if (win && win.isVisible()) win.hide();
+    if (win && win.isVisible()) hideOverlay();
   });
 }
 
@@ -107,6 +107,13 @@ function toggleOverlay() {
   } else {
     showOverlay();
   }
+}
+
+// Esconde a janela e manda o renderer resetar pro início (evita "flash" do estado anterior na próxima abertura).
+function hideOverlay() {
+  if (!win) return;
+  win.hide();
+  win.webContents.send('overlay:reset');
 }
 
 // ---------- Execução das ações ----------
@@ -246,11 +253,11 @@ function refreshTray() {
 
 // ---------- IPC (renderer -> main) ----------
 ipcMain.on('overlay:doHide', () => {
-  if (win) win.hide();
+  hideOverlay();
 });
 
 ipcMain.on('action:run', (_e, action) => {
-  if (win) win.hide();           // esconde antes para devolver o foco ao app de destino
+  hideOverlay();                 // esconde antes para devolver o foco ao app de destino
   setTimeout(() => executeAction(action), 50);
 });
 

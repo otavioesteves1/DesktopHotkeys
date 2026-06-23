@@ -390,11 +390,24 @@ body.mode-float .titlebar {
 }
 .titlebar__grip { color: var(--text-muted); letter-spacing: 2px; font-size: 14px; }
 .titlebar__name { font-size: 12px; color: var(--text-secondary); flex: 1; }
+.titlebar__done {
+  -webkit-app-region: no-drag; cursor: pointer; font-size: 12px; font-weight: 500;
+  color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent);
+  border-radius: 7px; padding: 4px 12px;
+}
+.titlebar__done:hover { background: rgba(34, 211, 238, 0.20); }
 .titlebar__close {
   -webkit-app-region: no-drag; cursor: pointer; color: var(--text-secondary);
-  font-size: 13px; border: none; background: transparent; padding: 4px 9px; border-radius: 6px;
+  font-size: 14px; border: none; background: transparent; padding: 4px 9px; border-radius: 6px;
 }
 .titlebar__close:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+
+/* Nos formulários, esconde o rodapé do board (evita confundir Concluir com Salvar) */
+.editor.is-on ~ .footer { display: none; }
+
+/* Histórico de ícones (Recentes) */
+#f-recent { max-height: 78px; overflow: hidden; }
+.emojis button img { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; }
 
 body.mode-float .overlay { align-items: stretch; justify-content: stretch; padding: 0; }
 body.mode-float .overlay__panel {

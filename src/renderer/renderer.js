@@ -62,6 +62,7 @@ const editbadge = document.getElementById('editbadge');
 const btnTmpl = document.getElementById('btn-tmpl');
 const btnNewProj = document.getElementById('btn-newproj');
 const titlebarClose = document.getElementById('titlebar-close');
+const tbDone = document.getElementById('tb-done');
 let curMode = 'launcher';
 
 // ---------- Utilitários ----------
@@ -97,10 +98,31 @@ function applyUI() {
   body.classList.add('size-' + tam, 'pos-' + pos, 'bg-' + fun);
 }
 
+// Histórico dos últimos ícones usados (entra novo, sai velho).
+function addIconHistory(ic) {
+  if (!ic) return;
+  if (!Array.isArray(fullConfig.iconHistory)) fullConfig.iconHistory = [];
+  const h = fullConfig.iconHistory;
+  const i = h.indexOf(ic);
+  if (i >= 0) h.splice(i, 1);
+  h.unshift(ic);
+  if (h.length > 14) h.length = 14;
+}
+
+function recentsHTML() {
+  const h = (fullConfig && fullConfig.iconHistory) || [];
+  if (!h.length) return '';
+  return `<div class="fhint" style="margin-top:10px">Recentes</div>
+    <div class="emojis" id="f-recent">${h.map(ic => `<button type="button" data-ic="${esc(ic)}">${iconHTML({ icone: ic })}</button>`).join('')}</div>`;
+}
+
 // Janela cheia (launcher) quando navegando; pequena e móvel quando editando/configurando.
 function applyWindowMode() {
   const want = (editMode || view !== 'grid') ? 'float' : 'launcher';
   body.classList.toggle('mode-float', want === 'float');
+  // "Editar" só no launcher; "Concluir" (na barra) só no board em edição.
+  editbtn.style.display = editMode ? 'none' : '';
+  tbDone.style.display = (editMode && view === 'grid') ? '' : 'none';
   if (want !== curMode) { curMode = want; window.api.setMode(want); }
 }
 
@@ -330,6 +352,7 @@ function buildForm(node) {
       </div>
       <div class="fhint">Dica: cole um emoji, cole o link de uma imagem/GIF, ou copie uma imagem e dê <b>Ctrl+V</b> aqui.</div>
       <div class="emojis" id="f-emojis">${EMOJIS.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>
+      ${recentsHTML()}
     </div>
     <div class="frow">
       <label class="flabel">Tipo do botão</label>
@@ -358,6 +381,11 @@ function buildForm(node) {
     if (p) document.getElementById('f-icone').value = p;
   });
   attachImagePaste(document.getElementById('f-icone'));
+  const rec = document.getElementById('f-recent');
+  if (rec) rec.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) document.getElementById('f-icone').value = b.dataset.ic;
+  });
   editorEl.querySelectorAll('.seg__btn').forEach(b => {
     b.addEventListener('click', () => {
       editingTipo = b.dataset.tipo;
@@ -463,6 +491,7 @@ function buildAcaoObject() {
 function applyForm(node) {
   node.label = val('f-nome') || 'Sem nome';
   const ic = val('f-icone'); if (ic) node.icone = ic; else delete node.icone;
+  addIconHistory(ic);
   if (editingTipo === 'pasta') {
     node.tipo = 'pasta';
     if (!Array.isArray(node.filhos)) node.filhos = [];
@@ -633,6 +662,7 @@ async function saveNewProject() {
   });
   const folderNode = { tipo: 'pasta', label: name, filhos: children };
   if (icone) folderNode.icone = icone;
+  addIconHistory(icone);
   const parent = current();
   if (!Array.isArray(parent.filhos)) parent.filhos = [];
   let idx = parent.filhos.findIndex(x => x == null);
@@ -830,6 +860,7 @@ editbtn.addEventListener('click', toggleEdit);
 btnTmpl.addEventListener('click', openTemplateEditor);
 btnNewProj.addEventListener('click', openNewProject);
 titlebarClose.addEventListener('click', () => closeWithAnim());
+tbDone.addEventListener('click', toggleEdit);
 
 // ---------- Arrastar pra reordenar ----------
 gridEl.addEventListener('dragstart', (e) => {

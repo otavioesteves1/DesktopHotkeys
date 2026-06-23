@@ -404,7 +404,7 @@ app.whenReady().then(() => {
       await wait(150);
       await win.webContents.executeJavaScript('toggleEdit();');
       await wait(300); await shot('streamdeck_selftest_edit.png'); await shotPanel('readme_edit.png');
-      await win.webContents.executeJavaScript('addAt(4); document.getElementById("f-acaotipo").value="abrir_arquivo"; document.getElementById("f-acaotipo").dispatchEvent(new Event("change"));');
+      await win.webContents.executeJavaScript('fullConfig.iconHistory=["📄","🤝","🧩","🏗️","👁️","🚧","👥","⚙️"]; addAt(4); document.getElementById("f-acaotipo").value="abrir_arquivo"; document.getElementById("f-acaotipo").dispatchEvent(new Event("change"));');
       await wait(300); await shot('streamdeck_selftest_form.png');
       await win.webContents.executeJavaScript('showGrid(); openTemplateEditor(); document.getElementById("tm-preset").click();');
       await wait(300); await shot('streamdeck_selftest_tmpl.png');

@@ -225,21 +225,22 @@ function psStr(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
 function isAutostart() { try { return fs.existsSync(STARTUP_LNK); } catch (e) { return false; } }
 function setAutostart(on) {
   if (on) {
-    let target, args, workdir;
+    let target, args, workdir, iconSrc;
     if (app.isPackaged) {
-      target = process.execPath;                 // o próprio .exe instalado
-      args = '';
-      workdir = path.dirname(process.execPath);
+      // No portátil, process.execPath é a pasta TEMP de extração; use o .exe real que o usuário abriu.
+      const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+      target = exe; args = ''; workdir = path.dirname(exe); iconSrc = exe;
     } else {
       target = 'C:\\Windows\\System32\\wscript.exe';
       args = '"' + path.join(app.getAppPath(), 'DesktopHotkeys.vbs') + '"';
       workdir = app.getAppPath();
+      iconSrc = process.execPath;
     }
     const ps = '$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut(' + psStr(STARTUP_LNK) +
       ');$s.TargetPath=' + psStr(target) +
       ';$s.Arguments=' + psStr(args) +
       ';$s.WorkingDirectory=' + psStr(workdir) +
-      ';$s.IconLocation=' + psStr(process.execPath + ',0') + ';$s.Save()';
+      ';$s.IconLocation=' + psStr(iconSrc + ',0') + ';$s.Save()';
     spawn('powershell.exe', ['-NoProfile', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   } else {
     try { fs.unlinkSync(STARTUP_LNK); } catch (e) { /* ignore */ }
@@ -271,7 +272,14 @@ function refreshTray() {
   const menu = Menu.buildFromTemplate([
     { label: 'Abrir painel  (' + prettyKey(hotkey) + ')', click: () => showOverlay() },
     { label: '✏️  Editar tela inicial', click: () => openEditHome() },
-    { label: '⚙️  Configurações (atalho, iniciar com Windows)…', click: () => openSettings() },
+    { label: '⚙️  Configurações…', click: () => openSettings() },
+    { type: 'separator' },
+    {
+      label: 'Iniciar com o Windows',
+      type: 'checkbox',
+      checked: isAutostart(),
+      click: (item) => { setAutostart(item.checked); setTimeout(refreshTray, 800); }
+    },
     { type: 'separator' },
     { label: 'Editar atalhos (config.json)', click: () => shell.openPath(CONFIG_PATH) },
     { label: 'Abrir pasta da configuração', click: () => shell.openPath(path.dirname(CONFIG_PATH)) },

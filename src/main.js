@@ -4,7 +4,7 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 
 const DEFAULT_HOTKEY = 'Control+Shift+Alt+P';
 // Em dev o config fica na pasta do projeto; empacotado (.exe) fica numa pasta gravável.
@@ -221,30 +221,31 @@ function persistHotkey(accel) {
 }
 
 // ---------- Iniciar com o Windows ----------
+// Usa a chave de registro HKCU\...\Run (método padrão do Windows, confiável).
+const RUN_KEY = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 function psStr(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
-function isAutostart() { try { return fs.existsSync(STARTUP_LNK); } catch (e) { return false; } }
-function setAutostart(on) {
-  if (on) {
-    let target, args, workdir, iconSrc;
-    if (app.isPackaged) {
-      // No portátil, process.execPath é a pasta TEMP de extração; use o .exe real que o usuário abriu.
-      const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
-      target = exe; args = ''; workdir = path.dirname(exe); iconSrc = exe;
-    } else {
-      target = 'C:\\Windows\\System32\\wscript.exe';
-      args = '"' + path.join(app.getAppPath(), 'DesktopHotkeys.vbs') + '"';
-      workdir = app.getAppPath();
-      iconSrc = process.execPath;
-    }
-    const ps = '$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut(' + psStr(STARTUP_LNK) +
-      ');$s.TargetPath=' + psStr(target) +
-      ';$s.Arguments=' + psStr(args) +
-      ';$s.WorkingDirectory=' + psStr(workdir) +
-      ';$s.IconLocation=' + psStr(iconSrc + ',0') + ';$s.Save()';
-    spawn('powershell.exe', ['-NoProfile', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-  } else {
-    try { fs.unlinkSync(STARTUP_LNK); } catch (e) { /* ignore */ }
+
+function autostartCommand() {
+  if (app.isPackaged) {
+    // No portátil, process.execPath é a pasta TEMP de extração; use o .exe real que o usuário abriu.
+    const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+    return '"' + exe + '"';
   }
+  return '"C:\\Windows\\System32\\wscript.exe" "' + path.join(app.getAppPath(), 'DesktopHotkeys.vbs') + '"';
+}
+
+function isAutostart() {
+  try {
+    execSync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v DesktopHotkeys', { stdio: 'ignore' });
+    return true;
+  } catch (e) { return false; }
+}
+
+function setAutostart(on) {
+  const ps = on
+    ? "Set-ItemProperty -Path '" + RUN_KEY + "' -Name DesktopHotkeys -Value " + psStr(autostartCommand())
+    : "Remove-ItemProperty -Path '" + RUN_KEY + "' -Name DesktopHotkeys -ErrorAction SilentlyContinue";
+  spawn('powershell.exe', ['-NoProfile', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
 }
 
 // ---------- Bandeja ----------
@@ -370,6 +371,8 @@ ipcMain.handle('icon:savePasted', (_e, dataUrl) => {
 // ---------- Ciclo de vida ----------
 app.whenReady().then(() => {
   ensureConfig();
+  // Migração: remove o atalho antigo da pasta Startup (agora usamos a chave de registro Run).
+  try { fs.unlinkSync(STARTUP_LNK); } catch (e) { /* já não existe */ }
   createWindow();
   createTray();
 

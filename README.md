@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎛️ DesktopHotkeys
+# DesktopHotkeys
 
 ### Seu painel de atalhos pessoal — abre por cima de tudo com um toque, controlado pelo teclado.
 
@@ -12,20 +12,20 @@ Pense num **Stream Deck**, mas dentro do PC e usando o teclado: aperta um atalho
 
 ---
 
-## ✨ O que é?
+## O que é?
 
 O **DesktopHotkeys** é um lançador (launcher) para Windows. Você aperta um atalho global
 (de fábrica `Ctrl + Shift + Alt + P`) e um painel aparece sobre qualquer janela. Cada
 quadradinho é:
 
-- **⚡ uma Ação** — abre um site, abre um programa/arquivo/pasta, roda um comando, copia um texto; ou
-- **📁 uma Pasta** — abre outro quadro de botões (sem limite de profundidade).
+- **uma Ação** — abre um site, abre um programa/arquivo/pasta, roda um comando, copia um texto; ou
+- **uma Pasta** — abre outro quadro de botões (sem limite de profundidade).
 
 Tudo na ponta dos dedos: você nunca tira a mão do teclado.
 
 ---
 
-## ⌨️ Como funciona
+## Como funciona
 
 Os botões ficam numa grade fixa de **12 lugares**, com teclas no estilo **StarCraft** —
 fáceis de alcançar com a mão esquerda:
@@ -42,26 +42,26 @@ fáceis de alcançar com a mão esquerda:
 - `Esc` / `Backspace` volta uma pasta · `Home` volta pro início · `Tab` / `← →` troca de página.
 - Aperta o atalho global de novo (ou clica fora) → fecha tudo.
 
-> 💡 Exemplo: `Q` (Autodesk) → `Q` (seu projeto) → `A` (Problemas) e o site abre. Um segundo.
+> Exemplo: `Q` (Autodesk) → `Q` (seu projeto) → `A` (Problemas) e o site abre. Um segundo.
 
 ---
 
-## 🚀 Recursos
+## Recursos
 
-- 🎯 **Acesso em 1 segundo**, 100% pelo teclado
-- 🗂️ **Pastas dentro de pastas** sem limite
-- 🖼️ **Ícone** com emoji **ou imagem/GIF**
-- ✏️ **Editor visual** dentro do app — sem mexer em arquivo
-- 🧲 **Arrastar pra reordenar** os botões
-- 🧩 **Modelos de projeto** — crie um projeto novo preenchendo todos os links e pastas numa tela só
-- 🪟 **Editor em janela móvel** — arraste pela barra ⠿ e deixe do lado do navegador; não escurece a tela
-- ⚙️ **Opções de interface** — tamanho (pequeno/médio/grande), posição (centro/embaixo) e fundo (escuro/leve/nenhum)
-- 🎚️ **Configurável pela bandeja** — troque o atalho de abertura e ligue "iniciar com o Windows"
-- 🔒 Sua configuração (`config.json`) fica **só na sua máquina**
+- **Acesso em 1 segundo**, 100% pelo teclado
+- **Pastas dentro de pastas** sem limite
+- **Ícone** com emoji **ou imagem/GIF**
+- **Editor visual** dentro do app — sem mexer em arquivo
+- **Arrastar pra reordenar** os botões
+- **Modelos de projeto** — crie um projeto novo preenchendo todos os links e pastas numa tela só
+- **Editor em janela móvel** — arraste pela barra ⠿ e deixe do lado do navegador; não escurece a tela
+- **Opções de interface** — tamanho (pequeno/médio/grande), posição (centro/embaixo) e fundo (escuro/leve/nenhum)
+- **Configurável pela bandeja** — troque o atalho de abertura e ligue "iniciar com o Windows"
+- Sua configuração (`config.json`) fica **só na sua máquina**
 
 ---
 
-## 📸 Telas
+## Telas
 
 **Editor em janela móvel** — ao editar, o painel vira uma janelinha que você arrasta pela barra ⠿ e deixa onde quiser; não escurece a tela.
 
@@ -77,7 +77,7 @@ fáceis de alcançar com a mão esquerda:
 
 ---
 
-## 📦 Rodar (desenvolvimento)
+## Rodar (desenvolvimento)
 
 Precisa do [Node.js](https://nodejs.org) instalado.
 
@@ -92,7 +92,7 @@ Na primeira vez, o app cria seu `config.json` a partir do `config.example.json`.
 
 ---
 
-## 🏗️ Gerar o executável (.exe)
+## Gerar o executável (.exe)
 
 ```bash
 npm install
@@ -103,7 +103,7 @@ O instalador do Windows é gerado na pasta **`dist/`** (ex.: `DesktopHotkeys Set
 junto com uma versão **portátil** (`DesktopHotkeys-x.y.z-portable.exe`) que roda sem instalar.
 Depois de aberto, o app fica na **bandeja** (perto do relógio) e sobe com o atalho global.
 
-## 🔄 Atualizar sem perder suas configurações
+## Atualizar sem perder suas configurações
 
 Suas configurações ficam em **`%APPDATA%\DesktopHotkeys\`** — uma pasta **separada do programa**.
 Por isso, ao baixar uma versão nova (pelos [Releases](https://github.com/otavioesteves1/DesktopHotkeys/releases))
@@ -112,11 +112,11 @@ inicial se ainda não existir; ele nunca apaga a sua.
 
 ---
 
-## ⚙️ Configuração
+## Configuração
 
 Você edita de dois jeitos (os dois convivem):
 
-1. **Pela interface** — abra o painel → **✏️ Editar** (ou `Ctrl+E`) → clique nos botões.
+1. **Pela interface** — abra o painel → **Editar** (ou `Ctrl+E`) → clique nos botões.
 2. **Pelo arquivo** — bandeja → botão direito → **Editar atalhos (config.json)**.
 
 Onde fica o `config.json`:

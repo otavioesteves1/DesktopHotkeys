@@ -21,5 +21,9 @@ contextBridge.exposeInMainWorld('api', {
   // configurações
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setHotkey: (accel) => ipcRenderer.invoke('settings:setHotkey', accel),
-  setAutostart: (on) => ipcRenderer.invoke('settings:setAutostart', on)
+  setAutostart: (on) => ipcRenderer.invoke('settings:setAutostart', on),
+  // localização portátil do config
+  getConfigPath:  ()  => ipcRenderer.invoke('config:get-path'),
+  setConfigPath:  (p) => ipcRenderer.invoke('config:set-path', p),
+  pickConfigFile: ()  => ipcRenderer.invoke('config:pick-file'),
 });

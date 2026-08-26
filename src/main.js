@@ -7,9 +7,11 @@ const fs = require('fs');
 const { spawn, execSync } = require('child_process');
 
 const DEFAULT_HOTKEY = 'Control+Shift+Alt+P';
-// Em dev o config fica na pasta do projeto; empacotado (.exe) fica numa pasta gravável.
 const EXAMPLE_PATH = path.join(app.getAppPath(), 'config.example.json');
-const CONFIG_PATH = app.isPackaged
+// META_PATH: sempre em userData — guarda onde o config real está salvo
+const META_PATH = path.join(app.getPath('userData'), 'meta.json');
+// CONFIG_PATH: localização padrão (userData para empacotado, projeto para dev)
+const CONFIG_PATH_DEFAULT = app.isPackaged
   ? path.join(app.getPath('userData'), 'config.json')
   : path.join(app.getAppPath(), 'config.json');
 const STARTUP_LNK = path.join(
@@ -30,17 +32,77 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
 
+// ---------- Meta (localização portátil do config) ----------
+function loadMeta() {
+  if (!fs.existsSync(META_PATH)) return {};
+  try { return JSON.parse(fs.readFileSync(META_PATH, 'utf8')); } catch { return {}; }
+}
+function saveMeta(m) {
+  fs.writeFileSync(META_PATH, JSON.stringify(m, null, 2), 'utf8');
+}
+function getConfigPath() {
+  const m = loadMeta();
+  return m.configPath || CONFIG_PATH_DEFAULT;
+}
+
 // ---------- Configuração ----------
 // Na primeira vez (sem config.json) cria a partir do modelo config.example.json.
 function ensureConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) {
-    if (fs.existsSync(EXAMPLE_PATH)) fs.copyFileSync(EXAMPLE_PATH, CONFIG_PATH);
+  const cp = getConfigPath();
+  if (!fs.existsSync(cp)) {
+    if (fs.existsSync(EXAMPLE_PATH)) {
+      try {
+        const dir = path.dirname(cp);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.copyFileSync(EXAMPLE_PATH, cp);
+      } catch {}
+    }
   }
 }
 
 function getConfig() {
-  const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
+  const raw = fs.readFileSync(getConfigPath(), 'utf-8');
   return JSON.parse(raw);
+}
+
+// Primeiro uso empacotado: pergunta onde salvar o config
+async function firstRunSetup() {
+  if (!app.isPackaged) return; // dev usa pasta do projeto como sempre
+  if (fs.existsSync(META_PATH)) return; // já configurado
+
+  const { response } = await dialog.showMessageBox({
+    type: 'question',
+    title: 'DesktopHotkeys — Configuração inicial',
+    message: 'Onde deseja salvar o arquivo de configuração?',
+    detail:
+      'Escolha "OneDrive / Personalizado" para sincronizar entre computadores.\n' +
+      'Escolha "Localização padrão" para usar a pasta de dados local.',
+    buttons: ['Localização padrão', 'OneDrive / Personalizado'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+
+  let cfgPath = CONFIG_PATH_DEFAULT;
+
+  if (response === 1) {
+    const r = await dialog.showSaveDialog({
+      title: 'Escolher onde salvar o arquivo de configuração',
+      defaultPath: path.join(app.getPath('home'), 'desktophotkeys_config.json'),
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (!r.canceled && r.filePath) cfgPath = r.filePath;
+  }
+
+  if (cfgPath !== CONFIG_PATH_DEFAULT && !fs.existsSync(cfgPath) && fs.existsSync(CONFIG_PATH_DEFAULT)) {
+    try {
+      const dir = path.dirname(cfgPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.copyFileSync(CONFIG_PATH_DEFAULT, cfgPath);
+    } catch {}
+  }
+
+  saveMeta({ configPath: cfgPath });
 }
 
 // ---------- Janela do overlay ----------
@@ -216,7 +278,7 @@ function persistHotkey(accel) {
   try {
     const cfg = getConfig();
     cfg.atalho = accel;
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+    fs.writeFileSync(getConfigPath(), JSON.stringify(cfg, null, 2), 'utf-8');
   } catch (e) { /* ignore */ }
 }
 
@@ -282,8 +344,9 @@ function refreshTray() {
       click: (item) => { setAutostart(item.checked); setTimeout(refreshTray, 800); }
     },
     { type: 'separator' },
-    { label: 'Editar atalhos (config.json)', click: () => shell.openPath(CONFIG_PATH) },
-    { label: 'Abrir pasta da configuração', click: () => shell.openPath(path.dirname(CONFIG_PATH)) },
+    { label: 'Editar atalhos (config.json)',       click: () => shell.openPath(getConfigPath()) },
+    { label: 'Abrir pasta da configuração',        click: () => shell.openPath(path.dirname(getConfigPath())) },
+    { label: 'Alterar localização do config...',   click: () => changeConfigLocation() },
     { type: 'separator' },
     { label: 'Sair', click: () => app.quit() }
   ]);
@@ -305,8 +368,41 @@ ipcMain.on('edit:setMode', (_e, on) => { editMode = !!on; });
 ipcMain.on('window:mode', (_e, mode) => setWindowMode(mode));
 
 ipcMain.handle('config:save', (_e, config) => {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  const cp = getConfigPath();
+  const dir = path.dirname(cp);
+  if (!fs.existsSync(dir)) try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+  fs.writeFileSync(cp, JSON.stringify(config, null, 2), 'utf-8');
   return true;
+});
+
+ipcMain.handle('config:get-path', () => getConfigPath());
+
+ipcMain.handle('config:set-path', async (_, newPath) => {
+  try {
+    const oldPath = getConfigPath();
+    if (!fs.existsSync(newPath)) {
+      const dir = path.dirname(newPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      if (fs.existsSync(oldPath)) fs.copyFileSync(oldPath, newPath);
+    }
+    const meta = loadMeta();
+    meta.configPath = newPath;
+    saveMeta(meta);
+    refreshTray();
+    return { ok: true, path: newPath };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('config:pick-file', async () => {
+  const def = loadMeta().configPath || path.join(app.getPath('home'), 'desktophotkeys_config.json');
+  const r = await dialog.showSaveDialog(win, {
+    title: 'Escolher local para o arquivo de configuração',
+    defaultPath: def,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  return r.canceled ? null : r.filePath;
 });
 
 ipcMain.handle('dialog:pickFile', async () => {
@@ -368,8 +464,34 @@ ipcMain.handle('icon:savePasted', (_e, dataUrl) => {
   } catch (e) { return null; }
 });
 
+// Altera a localização do config via dialog (invocado pelo tray)
+async function changeConfigLocation() {
+  const def = loadMeta().configPath || path.join(app.getPath('home'), 'desktophotkeys_config.json');
+  const r = await dialog.showSaveDialog({
+    title: 'Escolher local para o arquivo de configuração',
+    defaultPath: def,
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (r.canceled || !r.filePath) return;
+  const newPath = r.filePath;
+  const oldPath = getConfigPath();
+  if (!fs.existsSync(newPath) && fs.existsSync(oldPath)) {
+    try {
+      const dir = path.dirname(newPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.copyFileSync(oldPath, newPath);
+    } catch {}
+  }
+  const meta = loadMeta();
+  meta.configPath = newPath;
+  saveMeta(meta);
+  refreshTray();
+  notify('DesktopHotkeys', 'Localização do config alterada.\nNovo local: ' + newPath);
+}
+
 // ---------- Ciclo de vida ----------
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await firstRunSetup();
   ensureConfig();
   // Migração: remove o atalho antigo da pasta Startup (agora usamos a chave de registro Run).
   try { fs.unlinkSync(STARTUP_LNK); } catch (e) { /* já não existe */ }

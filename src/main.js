@@ -541,8 +541,8 @@ app.whenReady().then(async () => {
       await wait(300); await shot('streamdeck_selftest_form.png');
       await win.webContents.executeJavaScript('showGrid(); openTemplateEditor(); document.getElementById("tm-preset").click();');
       await wait(300); await shot('streamdeck_selftest_tmpl.png');
-      await win.webContents.executeJavaScript('showGrid(); current().modelo = AUTODESK_MODEL; render(); openNewProject();');
-      await wait(300); await shot('streamdeck_selftest_newproj.png'); await shotPanel('readme_newproj.png');
+      await win.webContents.executeJavaScript('showGrid(); current().modelo = AUTODESK_MODEL; render(); openNewProject(); document.getElementById("np-acc").value="https://acc.autodesk.com/model/viewer/projects/567b5d3f-2694-4949-a265-54b1b6018bcd/model-set/561838a0-1560-42c9-b9ec-d176a7c7c7f2/view/b2955a80-24c8-41a8-a693-ce42afe7e48d/models"; gerarLinksAcc();');
+      await wait(400); await shot('streamdeck_selftest_newproj.png'); await shotPanel('readme_newproj.png');
       await win.webContents.executeJavaScript('showGrid(); openSettingsView({ atalho: "Control+Shift+Alt+P", autostart: true });');
       await wait(250); await shot('streamdeck_selftest_settings.png');
       await win.webContents.executeJavaScript('capturing = true; window.dispatchEvent(new KeyboardEvent("keydown", { key: "q", ctrlKey: true, altKey: true, bubbles: true }));');

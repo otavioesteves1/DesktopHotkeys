@@ -598,6 +598,82 @@ async function saveTemplate() {
   toast('Modelo salvo ✓');
 }
 
+// ---------- Gerar links do ACC a partir de 1 link ----------
+function normLabel(s) { return String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim(); }
+
+function moduleOfUrl(p) {
+  if (/\/docs\/files\//.test(p)) return 'files';
+  if (/\/docs\/issues\//.test(p)) return 'issues';
+  if (/\/docs\/members\//.test(p)) return 'members';
+  if (/\/docs\/settings\//.test(p)) return 'settings';
+  if (/\/dc\/home\//.test(p)) return 'designcollab';
+  if (/\/model\/viewer\//.test(p)) return 'model';
+  if (/\/model\/views\//.test(p)) return 'views';
+  if (/\/model\/clashes\//.test(p)) return 'clashes';
+  return null;
+}
+
+function parseAcc(url) {
+  try {
+    const u = new URL(String(url).trim());
+    return {
+      base: u.origin,
+      pid: (u.pathname.match(/\/projects\/([^/]+)/) || [])[1] || '',
+      msid: (u.pathname.match(/\/model-set\/([^/]+)/) || [])[1] || '',
+      viewid: (u.pathname.match(/\/view\/([^/]+)/) || [])[1] || '',
+      raw: String(url).trim(),
+      module: moduleOfUrl(u.pathname)
+    };
+  } catch (e) { return null; }
+}
+
+// Descobre qual módulo do ACC um campo representa (pelo campo.acc ou pelo nome).
+function accModuleForField(f) {
+  if (f.acc) return f.acc;
+  const m = {
+    'arquivos': 'files', 'problemas': 'issues', 'membros': 'members',
+    'configuracoes': 'settings', 'designcollab': 'designcollab', 'design collab': 'designcollab',
+    'modelo': 'model', 'vistas': 'views', 'interferencias': 'clashes'
+  };
+  return m[normLabel(f.label)] || null;
+}
+
+function accUrlFor(mod, info) {
+  const b = info.base || 'https://acc.autodesk.com';
+  const pid = info.pid;
+  if (!pid) return null;
+  if (mod === info.module && info.raw) return info.raw; // preserva o link exato colado
+  switch (mod) {
+    case 'files': return `${b}/docs/files/projects/${pid}`;
+    case 'issues': return `${b}/docs/issues/projects/${pid}`;
+    case 'members': return `${b}/docs/members/projects/${pid}`;
+    case 'settings': return `${b}/docs/settings/projects/${pid}`;
+    case 'designcollab': return `${b}/dc/home/projects/${pid}`;
+    case 'views': return info.msid ? `${b}/model/views/projects/${pid}/model-set/${info.msid}` : null;
+    case 'clashes': return info.msid ? `${b}/model/clashes/projects/${pid}/model-set/${info.msid}` : null;
+    case 'model': return info.msid ? (`${b}/model/viewer/projects/${pid}/model-set/${info.msid}` + (info.viewid ? `/view/${info.viewid}/models` : '/models')) : null;
+    default: return null;
+  }
+}
+
+function gerarLinksAcc() {
+  const info = parseAcc(val('np-acc'));
+  if (!info || !info.pid) { toast('Não reconheci esse link do ACC'); return; }
+  let ok = 0, faltouModelo = false;
+  npWork.forEach((f, i) => {
+    if (f.tipo !== 'abrir_url') return;
+    const mod = accModuleForField(f);
+    if (!mod) return;
+    const u = accUrlFor(mod, info);
+    const el = document.getElementById('np-f-' + i);
+    if (u && el) { el.value = u; ok++; }
+    else if (['model', 'views', 'clashes'].includes(mod)) faltouModelo = true;
+  });
+  if (ok && faltouModelo) toast(ok + ' links gerados · faltam Modelo/Vistas/Interf. (cole o link do Modelo)');
+  else if (ok) toast(ok + ' links gerados ✓');
+  else toast('Nada pra gerar com esse link');
+}
+
 // ---------- Novo projeto pelo modelo ----------
 function openNewProject() {
   const folder = current();
@@ -632,6 +708,14 @@ function renderNewProject() {
       <label class="flabel">Ícone (opcional)</label>
       <input id="np-icone" class="finput" type="text" placeholder="Cole um emoji" value="🏢">
     </div>
+    <div class="frow" style="background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:10px">
+      <label class="flabel" style="color:var(--accent)">🔗 Colar 1 link do ACC → gera os outros</label>
+      <div class="frow-inline">
+        <input id="np-acc" class="finput" type="text" placeholder="Cole o link do Modelo (viewer) — preenche tudo">
+        <button type="button" id="np-gerar" class="fbtn primary">Gerar</button>
+      </div>
+      <div class="fhint">O link do Modelo tem tudo. Um link de Arquivos/Problemas gera os do Docs; os de Modelo/Vistas/Interferências precisam do link do Modelo.</div>
+    </div>
     <div class="flabel" style="margin:6px 0 2px">Links e pastas do projeto:</div>
     ${fields}
     <div class="formbtns">
@@ -644,6 +728,8 @@ function renderNewProject() {
   });
   document.getElementById('np-salvar').onclick = saveNewProject;
   document.getElementById('np-cancelar').onclick = () => showGrid();
+  document.getElementById('np-gerar').onclick = gerarLinksAcc;
+  document.getElementById('np-acc').addEventListener('paste', () => setTimeout(gerarLinksAcc, 60));
   attachImagePaste(document.getElementById('np-icone'));
   document.getElementById('np-nome').focus();
 }

@@ -346,7 +346,8 @@ function refreshTray() {
     { type: 'separator' },
     { label: 'Editar atalhos (config.json)',       click: () => shell.openPath(getConfigPath()) },
     { label: 'Abrir pasta da configuração',        click: () => shell.openPath(path.dirname(getConfigPath())) },
-    { label: 'Alterar localização do config...',   click: () => changeConfigLocation() },
+    { label: 'Selecionar arquivo de config existente...', click: () => selectConfigFile() },
+    { label: 'Salvar config em outro local...',    click: () => changeConfigLocation() },
     { type: 'separator' },
     { label: 'Sair', click: () => app.quit() }
   ]);
@@ -487,6 +488,26 @@ async function changeConfigLocation() {
   saveMeta(meta);
   refreshTray();
   notify('DesktopHotkeys', 'Localização do config alterada.\nNovo local: ' + newPath);
+}
+
+// Seleciona um arquivo de config JÁ EXISTENTE (ex.: o mesmo arquivo sincronizado, em cada PC).
+async function selectConfigFile() {
+  const r = await dialog.showOpenDialog({
+    title: 'Selecionar o arquivo de configuração (config.json)',
+    properties: ['openFile'],
+    filters: [{ name: 'Configuração (JSON)', extensions: ['json'] }],
+    defaultPath: path.dirname(getConfigPath())
+  });
+  if (r.canceled || !r.filePaths.length) return;
+  const chosen = r.filePaths[0];
+  // valida que é um JSON legível antes de apontar
+  try { JSON.parse(fs.readFileSync(chosen, 'utf-8')); }
+  catch (e) { notify('DesktopHotkeys', 'Esse arquivo não é um config válido (JSON).'); return; }
+  const meta = loadMeta();
+  meta.configPath = chosen;
+  saveMeta(meta);
+  refreshTray();
+  notify('DesktopHotkeys', 'Agora usando este config:\n' + chosen);
 }
 
 // ---------- Ciclo de vida ----------

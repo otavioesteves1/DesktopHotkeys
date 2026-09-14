@@ -1,6 +1,6 @@
 {
   "name": "desktop-hotkeys",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "DesktopHotkeys — painel de atalhos (launcher overlay) por atalho global no Windows",
   "main": "src/main.js",
   "scripts": {
